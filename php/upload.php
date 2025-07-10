@@ -59,7 +59,7 @@ $newFileName = generateUniqueFileName($uploadedFile['name']);
 // Configuration for Google Cloud Storage
 $projectId = 'fits-n-finds-project'; // Replace with your GCP Project ID
 $bucketName = 'fits-n-finds-bucket-storage'; // Replace with your GCS Bucket Name
-$keyFilePath = __DIR__ . '/../fits-n-finds-project-6a48bf86ae7b.json'; // Path to your downloaded JSON key file
+$keyFilePath = __DIR__ . '/../fits-n-finds-project-53790d3e3562.json'; // Path to your downloaded JSON key file
 
 try {
     $storage = new StorageClient([
