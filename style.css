@@ -1,0 +1,780 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 8px;
+    box-sizing: border-box; /* Ensures padding/margin doesn't affect overall width */
+
+}
+
+/* Form Page Styling (Register + Login) */
+.form-container {
+    max-width: 400px;
+    margin: 48px auto;
+    background-color: #f5f7fa;
+    padding: 32px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.form-container h2 {
+    color: #2c3e50;
+    margin-bottom: 24px;
+}
+
+.form input {
+    width: 100%;
+    padding: 12px 16px;
+    margin: 8px 0;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #fff;
+    font-size: 16px;
+}
+
+.form button {
+    width: 100%;
+    padding: 12px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    cursor: pointer;
+    margin-top: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.form button:hover {
+    background-color: #2980b9;
+}
+
+.form-container p {
+    margin-top: 16px;
+    color: #555;
+}
+
+.form-container a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.form-container a:hover {
+    text-decoration: underline;
+}
+
+.password_text {
+    color: red !important;
+}
+
+.password_text_login {
+    color: red !important;
+}
+
+
+/* Home page styling */
+.home_title {
+    margin-top: 16vh;
+    width: fit-content; /* Or a specific width like 80% or 500px */
+    margin-left: auto;
+    margin-right: auto;
+}
+/* Category Buttons */
+#category-buttons {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 32px;
+}
+
+#category-buttons button {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 0 8px;
+    transition: background-color 0.3s ease;
+}
+
+#category-buttons button:hover {
+    background-color: #2980b9;
+}
+
+/* Items container */
+.item-container {
+    display: flex;
+    flex-direction: column; /* Stack categories vertically */
+    gap: 48px; /* Add space between categories */
+}
+
+/* Item Category */
+.item-category {
+    display: block; 
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.item-category .category-header {
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: #333;
+}
+
+/* Item Row */
+.item-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px; /* Space between items */
+}
+
+/* Individual Item */
+.item {
+    width: 220px;
+    text-align: center;
+    background-color: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.item:hover {
+    transform: scale(1.05);
+}
+
+.item img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+.item h3 {
+    font-size: 20px;
+    margin-top: 16px;
+}
+
+.item p {
+    font-size: 16px;
+    color: #555;
+    margin: 8px 0;
+}
+
+.view-btn {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    padding: 8px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.view-btn:hover {
+    background-color: #2980b9;
+}
+
+.welcome_text {
+    color: #41b3ff;
+}
+
+/* Navigation Bar */
+nav {
+    background-color: #2c3e50;
+    padding: 15px 60px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.4s ease-in-out; /* Animate height and color */
+    font-size: 20px;
+    z-index :1000;
+}
+
+.scrolled {
+    height: 43px;
+    opacity: 0.92;
+    padding: 12px 32px; /* Reduce vertical padding to match new height */
+  } 
+
+
+nav .nav-links {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex: 1;
+    margin-left: 30px;
+}
+
+nav .left-links,
+nav .right-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+nav .nav-links a {
+    color: #ecf0f1;
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+nav .nav-links a:hover {
+    background-color: #3498db;
+}
+
+/* Register and login buttons styling */
+nav .right-links a {
+    background-color: #3498db;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    transition: background-color 0.3s ease, border-width 0.3s ease;
+    border: 2px solid transparent; 
+}
+
+nav .right-links a:hover {
+    background-color: #2980b9;
+    border-width: 2px; 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/* Cart page container */
+.cart-container {
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.cart-container h1 {
+    text-align: center;
+    font-size: 36px;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+/* Cart item styling */
+.cart-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cart-item img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-right: 20px;
+}
+
+/* Item details */
+.cart-item-details h2 {
+    font-size: 20px;
+    color: #333;
+    margin: 0;
+}
+
+.cart-item-details p {
+    font-size: 16px;
+    color: #555;
+}
+
+/* Container for quantity controls and remove button */
+.item-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 200px;  /* Make sure the item controls fit next to each other */
+}
+
+/* Quantity controls styling */
+.quantity-controls {
+    display: flex;
+    align-items: center;
+}
+
+.quantity-btn {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    padding: 6px 10px;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.quantity-btn:hover {
+    background-color: #2980b9;
+}
+
+.quantity-input {
+    width: 40px;
+    text-align: center;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 4px;
+    background-color: #fff;
+    margin: 0 8px;
+    font-weight: bold;
+}
+
+/* Remove button styling */
+.remove-btn {
+    background-color: #e74c3c;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    font-size: 14px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.remove-btn:hover {
+    background-color: #c0392b;
+}
+
+/* Checkout section */
+.checkout {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.checkout h3 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.checkout-btn {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    padding: 12px 30px;
+    font-size: 18px;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.checkout-btn:hover {
+    background-color: #2980b9;
+}
+
+
+
+
+
+
+
+
+
+/* Post item container */
+.post-item-container {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 30px;
+    background-color: #f5f7fa;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.post-item-container h1 {
+    text-align: center;
+    font-size: 36px;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+/* Form styling */
+.post-item-form label {
+    font-size: 16px;
+    color: #333;
+    display: block;
+    margin: 10px 0;
+}
+
+.post-item-form input, 
+.post-item-form textarea {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: #fff;
+}
+
+.post-item-form textarea {
+    height: 100px;
+}
+
+/* Submit button styling */
+.post-item-btn {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    padding: 12px 30px;
+    font-size: 18px;
+    border-radius: 30px;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.3s ease;
+}
+
+.post-item-btn:hover {
+    background-color: #2980b9;
+}
+
+.post-item-form select {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0 20px 0; /* Add more margin-bottom for spacing */
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: #fff;
+    appearance: none; /* Remove default system dropdown arrow */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="#333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* Custom arrow */
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 20px;
+    cursor: pointer;
+}
+
+.post-item-form select:focus {
+    border-color: #3498db; /* Highlight on focus */
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2); /* Soft blue glow */
+}
+
+/* Style for the options within the select dropdown */
+.post-item-form select option {
+    padding: 10px; /* Add padding to options */
+    background-color: #fff;
+    color: #333;
+}
+
+.home_title {
+    text-align: center;
+    padding: 42px 24px;
+    background-color: #fff;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.home_title h1 {
+    font-size: 2.8em;
+    color: #4a4a4a;
+    margin: 0;
+}
+
+/* Category Filter Buttons */
+#category-buttons {
+    text-align: center;
+    margin-bottom: 32px;
+    padding: 0 24px;
+}
+
+#category-buttons button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 24px;
+    margin: 4px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#category-buttons button:hover {
+    background-color: #0056b3;
+}
+
+/* Items Container - Grid Layout */
+.item-list-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Responsive grid */
+    gap: 24px; /* Space between items */
+    padding: 24px;
+    max-width: 1200px; /* Max width for the container */
+    margin: 0 auto; /* Center the container */
+}
+
+/* Individual Item Card Styling */
+.item-card {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    overflow: hidden; /* Ensures image corners are rounded */
+    display: flex; /* Use flexbox for content within card */
+    flex-direction: column; /* Stack image and details vertically */
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.item-card:hover {
+    transform: translateY(-5px); /* Slight lift on hover */
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+
+.item-card img {
+    width: 100%;
+    height: 200px; /* Fixed height for images */
+    object-fit: cover; /* Cover the area without distortion */
+    border-bottom: 1px solid #eee;
+}
+
+.item-details {
+    padding: 16px;
+    flex-grow: 1; /* Allow details section to grow */
+    display: flex;
+    flex-direction: column;
+}
+
+.item-name {
+    font-size: 1.4em;
+    margin-top: 0;
+    margin-bottom: 6px; /* Slightly reduced from 8px for consistency */
+    color: #333;
+    font-weight: bold;
+}
+
+
+.item-category,
+.item-seller,
+.item-size,
+.item-condition {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 1px; /* Reduced from 3px to 2px */
+}
+
+.item-price {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #28a745;
+    margin-top: 1px; /* Slightly reduced from 10px if you want it closer to description */
+    margin-bottom: 1px; /* Slightly reduced from 5px */
+}
+
+.item-condition {
+    font-size: 0.95em;
+    font-style: italic;
+    color: #007bff; /* Blue for condition */
+
+}
+
+.view-item-button, .add-to-cart-home-btn {
+    display: block;
+    width: calc(100% - 30px); /* Account for 15px margin on each side */
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95em;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-sizing: border-box; /* Include padding/border in width */
+}
+
+.add-to-cart-home-btn {
+    background-color: #28a745; /* Green for add to cart */
+}
+
+.view-item-button:hover, .add-to-cart-home-btn:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+.add-to-cart-home-btn:hover {
+    background-color: #218838; /* Darker green for add to cart */
+}
+
+/* Messages for no items or errors */
+.no-items-message,
+.error-message {
+    text-align: center;
+    font-size: 1.2em;
+    color: #888;
+    padding: 48px;
+    grid-column: 1 / -1; /* Center across all columns in grid */
+}
+
+/* Item Detail Page Container for SPA */
+.item-detail-spa-container {
+    max-width: 900px;
+    margin: 15vh auto 40px auto; /* Adjust margin-top to fit under navbar if needed */
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Detail card styling (mostly existing, ensure consistency) */
+.detail-card {
+    display: flex;
+    flex-wrap: wrap; /* Allows wrapping on smaller screens */
+    gap: 30px; /* Space between image and info */
+    align-items: flex-start; /* Align items to the top */
+}
+
+.detail-image {
+    width: 100%;
+    max-width: 400px; /* Max width for image */
+    height: auto;
+    border-radius: 8px;
+    object-fit: contain;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.detail-info {
+    flex: 1; /* Allows info to take remaining space */
+    min-width: 300px; /* Ensures info section doesn't get too small */
+}
+
+.detail-name {
+    font-size: 2.5em;
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.detail-price {
+    font-size: 2.2em;
+    font-weight: bold;
+    color: #28a745;
+    margin-bottom: 15px;
+}
+
+.detail-info p {
+    font-size: 1.1em;
+    margin-bottom: 8px;
+    color: #555;
+}
+
+.detail-info p span {
+    font-weight: bold;
+    color: #333;
+}
+
+.detail-description {
+    font-size: 1em;
+    color: #444;
+    line-height: 1.8;
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+
+.add-to-cart-btn {
+    display: block;
+    width: 100%;
+    max-width: 250px; /* Max width for the button */
+    padding: 15px 25px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    margin-top: 30px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.add-to-cart-btn:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .detail-card {
+        flex-direction: column;
+    }
+    .detail-image {
+        max-width: 100%;
+    }
+}
+
+.remove-from-cart-btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #dc3545; /* Bootstrap-like red for danger/removal */
+    color: white;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+    margin-left: auto; /* Pushes the button to the right if in a flex container */
+}
+
+.remove-from-cart-btn:hover {
+    background-color: #c82333; /* Darker red on hover */
+}
+
+/* You might want to adjust the .cart-item to use flexbox
+   to easily align image, details, and button on one line */
+.cart-item {
+    display: flex;
+    align-items: center; /* Vertically align items */
+    gap: 15px; /* Space between elements */
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.cart-item-image {
+    width: 80px; /* Adjust as needed */
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.cart-item-details {
+    flex-grow: 1; /* Allows details to take up available space */
+}

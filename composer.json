@@ -1,0 +1,6 @@
+{
+    "require": {
+        "flightphp/core": "^3.16",
+        "google/cloud-storage": "^1.48"
+    }
+}
