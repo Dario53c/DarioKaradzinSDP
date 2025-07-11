@@ -1,12 +1,14 @@
 <?php
 
-ini_set('display_errors', 'Off'); // Set to 'Off' for production 
-
 require __DIR__ . '/../vendor/autoload.php';
 
 use Google\Cloud\Storage\StorageClient;
-use Exception;
+use Dotenv\Dotenv;
 
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../');
+
+// Load the environment variables from the .env file
+$dotenv->load();
 // Check if file was uploaded via POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_FILES['imageFile'])) {
     echo json_encode(['success' => false, 'message' => 'Invalid request or no file uploaded.']);
@@ -57,22 +59,30 @@ function generateUniqueFileName(string $originalFileName): string {
 }
 $newFileName = generateUniqueFileName($uploadedFile['name']);
 
-
+header('Content-Type: application/json');
 // Configuration for Google Cloud Storage
 $projectId = 'fits-n-finds-project'; // Replace with your GCP Project ID
 $bucketName = 'fits-n-finds-bucket-storage'; // Replace with your GCS Bucket Name
+//$keyFilePath = __DIR__ . '/../fits-n-finds-project-c6d1a4cc02bd.json'; // Path to your downloaded JSON key file
+
+
 
 try {
-    $gcsCredentialsJson = $_ENV['GOOGLE_APPLICATION_CREDENTIALS_JSON'];
+    $gcsCredentialsJson = $_ENV['GOOGLE_APPLICATION_CREDENTIALS_JSON']; // Accessing the env variable
 
+    // Check if the variable is empty (though Dotenv usually handles "not set" by not loading)
     if (!$gcsCredentialsJson) {
+        // You might want a more specific HTTP status code here, e.g., 500 Internal Server Error
         error_log("Google Cloud credentials not found in environment variable GOOGLE_APPLICATION_CREDENTIALS_JSON.");
-        throw new Exception("Google Cloud credentials are not configured.");
+        echo json_encode(['success' => false, 'message' => 'Server configuration error: Google Cloud credentials not found.']);
+        exit;
     }
 
     $storage = new StorageClient([
         'projectId' => $projectId,
-        'keyFile' => json_decode($gcsCredentialsJson, true)]);
+        //'keyFilePath' => $keyFilePath
+        'keyFile' => json_decode($gcsCredentialsJson, true) // Use the JSON string from the environment variable
+        ]);
     $bucket = $storage->bucket($bucketName);
 
     // Upload the file to GCS

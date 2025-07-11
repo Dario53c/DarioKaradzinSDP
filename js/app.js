@@ -246,7 +246,7 @@ function attachFormHandlers() {
                     }
                 } catch (error) {
                     alert(`An error occurred during upload: ${error.message}`)
-                    console.error('Fetch error:', error);
+                    console.error('Fetch error:', error);  //line 249
                 }
 
                 const itemData = {
