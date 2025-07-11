@@ -3,7 +3,7 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 use Google\Cloud\Storage\StorageClient;
-
+use Exception;
 
 // Check if file was uploaded via POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_FILES['imageFile'])) {
@@ -59,12 +59,18 @@ $newFileName = generateUniqueFileName($uploadedFile['name']);
 // Configuration for Google Cloud Storage
 $projectId = 'fits-n-finds-project'; // Replace with your GCP Project ID
 $bucketName = 'fits-n-finds-bucket-storage'; // Replace with your GCS Bucket Name
-$keyFilePath = __DIR__ . '/../fits-n-finds-project-53790d3e3562.json'; // Path to your downloaded JSON key file
 
 try {
+    $gcsCredentialsJson = $_ENV['GOOGLE_APPLICATION_CREDENTIALS_JSON'];
+
+    if (!$gcsCredentialsJson) {
+        error_log("Google Cloud credentials not found in environment variable GOOGLE_APPLICATION_CREDENTIALS_JSON.");
+        throw new Exception("Google Cloud credentials are not configured.");
+    }
+
     $storage = new StorageClient([
         'projectId' => $projectId,
-        'keyFilePath' => $keyFilePath]);
+        'keyFile' => json_decode($gcsCredentialsJson, true)]);
     $bucket = $storage->bucket($bucketName);
 
     // Upload the file to GCS

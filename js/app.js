@@ -230,11 +230,12 @@ function attachFormHandlers() {
                     });
 
                     // Fetch API only rejects on network errors. Check response.status for HTTP errors.
-                    if (!response.ok) { // response.ok is true for 2xx status codes
+                    if (!response.ok) {
+                         // response.ok is true for 2xx status codes
                         const errorData = await response.json(); // Assuming server sends JSON error
                         throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
                     }
-
+                    
                     const result = await response.json();
                     if (result.success) {
                         console.log('Image URL:', result.imageUrl);
