@@ -1,5 +1,7 @@
 <?php
 
+ini_set('display_errors', 'Off'); // Set to 'Off' for production 
+
 require __DIR__ . '/../vendor/autoload.php';
 
 use Google\Cloud\Storage\StorageClient;
