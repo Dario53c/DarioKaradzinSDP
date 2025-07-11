@@ -63,7 +63,7 @@ header('Content-Type: application/json');
 // Configuration for Google Cloud Storage
 $projectId = 'fits-n-finds-project'; // Replace with your GCP Project ID
 $bucketName = 'fits-n-finds-bucket-storage'; // Replace with your GCS Bucket Name
-//$keyFilePath = __DIR__ . '/../fits-n-finds-project-c6d1a4cc02bd.json'; // Path to your downloaded JSON key file
+//$keyFilePath = __DIR__ . '/../name.json'; // Path to your downloaded JSON key file
 
 
 
