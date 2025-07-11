@@ -1,12 +1,6 @@
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
-use Dotenv\Dotenv;
-
-$dotenv = Dotenv::createImmutable(__DIR__ . '/../');
-
-// Load the environment variables from the .env file
-$dotenv->load();
 // Set the Content-Type header to application/json
 header('Content-Type: application/json');
 
