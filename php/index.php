@@ -101,6 +101,53 @@ Flight::route('GET /user/status', function() {
     }
 });
 
+Flight::route('GET /user/verified', function() {
+    if (!isset($_SESSION['user_id'])) {
+        Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to view your profile.'], 401);
+        return;
+    }
+
+    $userId = $_SESSION['user_id'];
+    $user = Flight::get('user');
+    $verifyData = $user->getUserVerified($userId); // This calls the UserClass method
+
+    // **THIS IS THE CRITICAL BLOCK**
+    if ($verifyData !== null) { // Using the refined logic as discussed
+        Flight::json(['status' => 'success', 'verified' => $verifyData], 200);
+    } else {
+        // This 'else' block is sending the 404.
+        Flight::json(['status' => 'error', 'message' => 'User profile not found or verification status could not be retrieved.'], 404);
+    }
+});
+
+Flight::route('GET /user/send-verification-email', function() {
+    if (!isset($_SESSION['user_id'])) {
+        Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to send verification email.'], 401);
+        return;
+    }
+
+    $userId = $_SESSION['user_id'];
+    $username = $_SESSION['username'];
+    $user = Flight::get('user');
+    $userEmail = $user->getUserEmailById($userId);
+
+    if ($userEmail === null) {
+        Flight::json(['status' => 'error', 'message' => 'User not found.'], 404);
+        return;
+    }
+    // Generate a random secret for testing the email function
+    $testSecret = $user->getSecretById($userId);
+
+    // Call the method to send the verification email
+    $result = $user->sendMailjetVerificationEmail($userEmail, $testSecret, $username);
+
+    if ($result) {
+        Flight::json(['status' => 'success', 'message' => 'Verification email sent successfully.'], 200);
+    } else {
+        Flight::json(['status' => 'error', 'message' => 'Failed to send verification email.'], 500);
+    }
+});
+
 Flight::route('POST /post-item', function() {
     $request = Flight::request();
     $data = $request->data->getData();
@@ -195,7 +242,118 @@ Flight::route('POST /items/sell', function() {
     }
 });
 
+Flight::route('GET /verify-email', function() {
+    // Get email and secret from URL query parameters
+    $email = Flight::request()->query->email;
+    $secret = Flight::request()->query->secret;
 
+    $user = Flight::get('user'); // Get the User service instance
+
+    // Prepare default status for the HTML output
+    $title = 'Verification Failed';
+    $message = 'An error occurred during verification. Please check your link or try again.';
+    $is_success = false;
+    $color = 'red';
+
+    if (!$email || !$secret) {
+        $message = 'Verification link is incomplete. Email or secret is missing.';
+        error_log("Verification failed: Missing email or secret in URL. Email: " . ($email ?? 'N/A') . ", Secret: " . ($secret ?? 'N/A'));
+    } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message = 'Invalid email format in the verification link.';
+        error_log("Verification failed for email: " . $email . " - Invalid email format.");
+    } else {
+        // Retrieve the stored secret from the database for the given email
+        $storedSecret = $user->getVerificationSecretByEmail($email);
+
+        if ($storedSecret === null) {
+            $message = 'User not found, already verified, or verification link is invalid/expired.';
+            error_log("Verification failed for email: " . $email . " - Secret not found in DB or user already verified.");
+        } else if ($secret !== $storedSecret) {
+            $message = 'Verification secret does not match. This link may be invalid or tampered with.';
+            error_log("Verification failed for email: " . $email . " - Secret mismatch. Provided: " . $secret . " | Stored: " . $storedSecret);
+        } else {
+            // Secrets match, proceed to verify the user
+            $verifyResult = $user->verifyUserByEmail($email);
+
+            if ($verifyResult['status'] === 'success') {
+                $title = 'Congratulations!';
+                $message = 'Your email has been successfully verified. You can now log in.';
+                $is_success = true;
+                $color = 'green';
+                error_log("Email verified successfully for: " . $email);
+            } else {
+                // Verification failed for another reason (e.g., database error)
+                $message = 'Verification failed: ' . $verifyResult['message'];
+                error_log("Verification failed for email: " . $email . " - " . $verifyResult['message']);
+            }
+        }
+    }
+
+    // --- Render HTML directly ---
+    echo "<!DOCTYPE html>
+    <html lang='en'>
+    <head>
+        <meta charset='UTF-8'>
+        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+        <title>" . htmlspecialchars($title) . " - Fits & Finds</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                margin: 0;
+                background-color: #f4f4f4;
+                text-align: center;
+            }
+            .container {
+                background-color: #ffffff;
+                padding: 30px;
+                border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                max-width: 500px;
+                width: 90%;
+            }
+            h1 {
+                color: " . ($is_success ? 'green' : 'red') . ";
+                margin-bottom: 20px;
+            }
+            p {
+                color: #555;
+                line-height: 1.6;
+            }
+            .home-link {
+                display: inline-block;
+                margin-top: 25px;
+                padding: 10px 20px;
+                background-color: #007bff;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                transition: background-color 0.3s ease;
+            }
+            .home-link:hover {
+                background-color: #0056b3;
+            }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <h1>" . htmlspecialchars($title) . "</h1>
+            <p>" . htmlspecialchars($message) . "</p>";
+    
+    if ($is_success) {
+        echo "<p>You can now return to the application and log in.</p>";
+    }
+    
+    echo "
+            <a href='http://".$_SERVER['HTTP_HOST'].dirname(dirname($_SERVER['SCRIPT_NAME']))."/' class='home-link'>Go to Homepage</a>
+        </div>
+    </body>
+    </html>";
+    // --- End HTML render ---
+});
 
 
 //KEEP AT THE BOTTOM OF ALL ROUTES

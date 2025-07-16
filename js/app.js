@@ -16,6 +16,20 @@ function renderPage() {
             });
     }
 
+    if (hash === "post_item"){
+        fetch('php/user/verified')
+            .then(response => response.json())
+            .then(verificationData => {
+                if (verification.status === "error") {
+                    alert("Verification error: " + verificationData.message);
+                    window.location.hash = "home";
+                } else if (verificationData.status === "success" && verificationData.verified == 0) {
+                    alert("Please verify your account before posting items.");
+                    window.location.hash = "home";
+                }
+            })
+    }
+
     if (hash === "register" || hash === "login") {
         navbar.style.display = "none";
     } else {
@@ -306,24 +320,97 @@ function updateNavbarForUser() {
             const rightLinks = document.querySelector('.right-links');
 
             if (data.loggedIn) {
-                rightLinks.innerHTML = `<span class="welcome_text">Welcome, ${data.username}</span> <a href="#" id="logoutBtn">Logout</a>`;
+                // User is logged in, now check verification status
+                fetch('php/user/verified') // Fetch the verification status
+                    .then(response => response.json())
+                    .then(verificationData => {
+                        let navHtml = `<span class="welcome_text">Welcome, ${data.username}</span> `;
 
-                const logoutBtn = document.getElementById('logoutBtn');
-                logoutBtn.addEventListener('click', () => {
-                    fetch('php/logout')
-                        .then(() => {
-                            window.location.hash = 'login';
-                            updateNavbarForUser();
+                        if (verificationData.status === 'success' && verificationData.verified == 1) {
+                            navHtml += `<span class="welcome_text">&#10003; Verified</span> `;
+                        } else if (verificationData.status === 'success' && verificationData.verified == 0) {
+                            navHtml += `<a href="#verify" class="verify-link">Verify Account</a> `; // Dummy link
+                        }
+
+                        navHtml += `<a href="#" id="logoutBtn">Logout</a>`;
+                        rightLinks.innerHTML = navHtml;
+
+                        const logoutBtn = document.getElementById('logoutBtn');
+                        logoutBtn.addEventListener('click', () => {
+                            fetch('php/logout')
+                                .then(() => {
+                                    window.location.hash = 'login';
+                                    updateNavbarForUser(); // Re-run to update to logged-out state
+                                })
+                                .catch(error => {
+                                    console.error('Logout error:', error);
+                                    // Potentially display a user-friendly message
+                                });
                         });
-                });
+
+                        const verifyLink = document.querySelector('.verify-link');
+                        if (verifyLink) {
+                            verifyLink.removeEventListener('click', handleVerifyLinkClick);
+                            verifyLink.addEventListener('click', handleVerifyLinkClick);
+                        }
+
+                    })
+                    .catch(error => {
+                        console.error('Error fetching verification status:', error);
+                        // If there's an error fetching verification status,
+                        // just show the basic logged-in state without verification info.
+                        rightLinks.innerHTML = `<span class="welcome_text">Welcome, ${data.username}</span> <a href="#" id="logoutBtn">Logout</a>`;
+
+                        const logoutBtn = document.getElementById('logoutBtn');
+                        logoutBtn.addEventListener('click', () => {
+                            fetch('php/logout')
+                                .then(() => {
+                                    window.location.hash = 'login';
+                                    updateNavbarForUser();
+                                });
+                        });
+                    });
+
             } else {
+                // User is not logged in
                 rightLinks.innerHTML = `
                     <a href="#register">Register</a>
                     <a href="#login">Log in</a>
                 `;
             }
+        })
+        .catch(error => {
+            console.error('Error fetching user status:', error);
+            // Handle initial fetch error (e.g., network issue, server down)
+            const rightLinks = document.querySelector('.right-links');
+            rightLinks.innerHTML = `
+                <a href="#register">Register</a>
+                <a href="#login">Log in</a>
+                <span style="color: red; margin-left: 10px;">(API Error)</span>
+            `;
         });
 }
 
 
 
+function handleVerifyLinkClick(event) {
+    event.preventDefault();
+    fetch('php/user/send-verification-email')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(verificationResponse => {
+            if (verificationResponse.status === 'success') {
+                alert('Verification email sent. Please check your email.');
+            } else {
+                alert(verificationResponse.message || 'Error sending verification email. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('An error occurred while sending the verification email. Please try again later.');
+        });
+}
