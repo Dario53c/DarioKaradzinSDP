@@ -348,7 +348,7 @@ Flight::route('GET /verify-email', function() {
     }
     
     echo "
-            <a href='http://".$_SERVER['HTTP_HOST'].dirname(dirname($_SERVER['SCRIPT_NAME']))."/' class='home-link'>Go to Homepage</a>
+        <a href='http://".$_SERVER['HTTP_HOST'].dirname(dirname($_SERVER['SCRIPT_NAME']))."' class='home-link'>Go to Homepage</a>
         </div>
     </body>
     </html>";
