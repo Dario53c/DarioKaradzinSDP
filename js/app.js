@@ -20,10 +20,10 @@ function renderPage() {
         fetch('php/user/verified')
             .then(response => response.json())
             .then(verificationData => {
-                if (verification.status === "error") {
+                if (verificationData.status === "error") {
                     alert("Verification error: " + verificationData.message);
                     window.location.hash = "home";
-                } else if (verificationData.status === "success" && verificationData.verified == 0) {
+                } else if (verificationData.verified == 0) {
                     alert("Please verify your account before posting items.");
                     window.location.hash = "home";
                 }
