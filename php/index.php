@@ -231,7 +231,7 @@ Flight::route('POST /items/sell', function() {
     $itemService = Flight::get('item');
 
     // 6. Call the markItemsAsSold method
-    $result = $itemService->markItemsAsSold($itemIds);
+    $result = $itemService->createOrder($_SESSION['user_id'], $itemIds);
 
     // 7. Return JSON Response based on the result
     if ($result) { // markItemsAsSold returns true on success (if at least one row affected)

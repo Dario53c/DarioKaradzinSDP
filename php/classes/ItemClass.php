@@ -122,39 +122,104 @@ class Item {
             return null;
         }
     }
-    
-    public function markItemsAsSold(array $itemIds): bool {
+
+        public function createOrder(int $buyerId, array $itemIds) {
         if (empty($itemIds)) {
-            // Log this as a debug message if helpful, but not necessarily an error
-            error_log("Attempted to mark items as sold with an empty ID array.");
+            error_log("Attempted to create an order with an empty item ID array for buyer ID: " . $buyerId);
             return false;
         }
+
+        // Start a transaction
+        $this->conn->beginTransaction();
 
         try {
-            // Create a string of question mark placeholders for the IN clause (?, ?, ?)
-            $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+            // 1. Create the Order
+            $orderQuery = "INSERT INTO orders (buyer_id) VALUES (?)";
+            $orderStmt = $this->conn->prepare($orderQuery);
+            $orderStmt->bindValue(1, $buyerId, PDO::PARAM_INT);
+            $orderStmt->execute();
 
-            $query = "UPDATE items
-                      SET is_sold = 1
-                      WHERE id IN (" . $placeholders . ")";
+            $orderId = $this->conn->lastInsertId();
 
-            $stmt = $this->conn->prepare($query);
-
-            // Bind each ID to its positional placeholder
-            // PDO bindValue and bindParam are 1-indexed for positional parameters
-            foreach ($itemIds as $index => $id) {
-                // Using bindValue for safety with foreach loop to ensure current value is bound
-                $stmt->bindValue(($index + 1), $id, PDO::PARAM_INT);
+            if (!$orderId) {
+                // This should ideally not happen if the INSERT was successful
+                // but good to check.
+                throw new Exception("Failed to retrieve new order ID after insertion.");
             }
 
-            $stmt->execute();
+            // 2. Insert into Order_Items for each item
+            // Using a single prepared statement for multiple inserts for efficiency
+            $orderItemsQuery = "INSERT INTO orderitems (order_id, item_id) VALUES (?, ?)";
+            $orderItemsStmt = $this->conn->prepare($orderItemsQuery);
 
-            // Return true if one or more rows were affected, indicating success
-            return $stmt->rowCount() > 0;
+            foreach ($itemIds as $itemId) {
+                $orderItemsStmt->bindValue(1, $orderId, PDO::PARAM_INT);
+                $orderItemsStmt->bindValue(2, $itemId, PDO::PARAM_INT);
+                // Execute for each item
+                $orderItemsStmt->execute();
+            }
 
-        } catch (PDOException $e) {
-            error_log("Database error in markItemsAsSold: " . $e->getMessage());
-            return false;
+            // 3. Mark the items as sold in the 'items' table
+            // Reusing your existing method
+            $itemsMarkedSold = $this->markItemsAsSold($itemIds);
+
+            if (!$itemsMarkedSold) {
+                throw new Exception("Failed to mark one or more items as sold.");
+            }
+
+            // If all operations succeed, commit the transaction
+            $this->conn->commit();
+            return (int)$orderId; // Return the new order ID
+
+        } catch (Exception $e) { // Catch Exception to include custom exceptions
+            // Something went wrong, rollback the transaction
+            $this->conn->rollBack();
+            error_log("Transaction failed for createOrder: " . $e->getMessage());
+            return false; // Indicate failure
         }
     }
+    
+// In ItemClass.php
+
+public function markItemsAsSold(array $itemIds): bool {
+    if (empty($itemIds)) {
+        error_log("markItemsAsSold: Attempted to mark items as sold with an empty ID array.");
+        return false;
+    }
+
+    try {
+        $placeholders = implode(',', array_fill(0, count($itemIds), '?'));
+
+        $query = "UPDATE items
+                  SET is_sold = 1
+                  WHERE id IN (" . $placeholders . ") AND is_sold = 0"; // ADDED CONDITION: Only update if not already sold
+
+        $stmt = $this->conn->prepare($query);
+
+        foreach ($itemIds as $index => $id) {
+            $stmt->bindValue(($index + 1), $id, PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+
+        $affectedRows = $stmt->rowCount();
+        $expectedRows = count($itemIds);
+
+        if ($affectedRows > 0) {
+            if ($affectedRows < $expectedRows) {
+                error_log("markItemsAsSold: Partial success. Expected to mark " . $expectedRows . " items sold, but only " . $affectedRows . " were affected. Some items may have been already sold or non-existent. Item IDs: " . implode(',', $itemIds));
+                // Depending on your logic, you might still want to return true here if *some* were sold.
+                // For now, let's keep it strict: all must be sold.
+            }
+            return true; // At least one item was marked sold, or all if affectedRows == expectedRows
+        } else {
+            error_log("markItemsAsSold: No items were marked as sold. This could be because they don't exist, are already sold, or a query issue. Item IDs: " . implode(',', $itemIds));
+            return false; // No items were affected
+        }
+
+    } catch (PDOException $e) {
+        error_log("Database error in markItemsAsSold: " . $e->getMessage() . " for Item IDs: " . implode(',', $itemIds));
+        return false;
+    }
+}
 }
