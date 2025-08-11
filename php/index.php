@@ -14,9 +14,10 @@ require_once __DIR__ . '/classes/UserClass.php';
 require_once __DIR__ . '/classes/ItemClass.php';
 
 use Google\Cloud\Storage\StorageClient; 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..'); // Assuming .env is in the project root
-$dotenv->load();
-
+if(file_exists(__DIR__ . '/../.env')) {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..'); // Assuming .env is in the project root
+    $dotenv->load();
+}
 
 // --- Register Services with Flight ---
 Flight::set('user', new User($pdo_conn));
