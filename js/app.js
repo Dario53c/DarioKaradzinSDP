@@ -327,7 +327,7 @@ function updateNavbarForUser() {
                         let navHtml = `<span class="welcome_text">Welcome, ${data.username}</span> `;
 
                         if (verificationData.status === 'success' && verificationData.verified == 1) {
-                            navHtml += `<span class="welcome_text">&#10003; Verified</span> `;
+                            navHtml = `<span class="welcome_text">Welcome, ${data.username} &#10003;</span> `;
                         } else if (verificationData.status === 'success' && verificationData.verified == 0) {
                             navHtml += `<a href="#verify" class="verify-link">Verify Account</a> `; // Dummy link
                         }

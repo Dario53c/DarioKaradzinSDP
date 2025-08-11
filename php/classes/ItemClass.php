@@ -123,61 +123,58 @@ class Item {
         }
     }
 
-        public function createOrder(int $buyerId, array $itemIds) {
-        if (empty($itemIds)) {
-            error_log("Attempted to create an order with an empty item ID array for buyer ID: " . $buyerId);
-            return false;
-        }
-
-        // Start a transaction
-        $this->conn->beginTransaction();
-
-        try {
-            // 1. Create the Order
-            $orderQuery = "INSERT INTO orders (buyer_id) VALUES (?)";
-            $orderStmt = $this->conn->prepare($orderQuery);
-            $orderStmt->bindValue(1, $buyerId, PDO::PARAM_INT);
-            $orderStmt->execute();
-
-            $orderId = $this->conn->lastInsertId();
-
-            if (!$orderId) {
-                // This should ideally not happen if the INSERT was successful
-                // but good to check.
-                throw new Exception("Failed to retrieve new order ID after insertion.");
-            }
-
-            // 2. Insert into Order_Items for each item
-            // Using a single prepared statement for multiple inserts for efficiency
-            $orderItemsQuery = "INSERT INTO orderitems (order_id, item_id) VALUES (?, ?)";
-            $orderItemsStmt = $this->conn->prepare($orderItemsQuery);
-
-            foreach ($itemIds as $itemId) {
-                $orderItemsStmt->bindValue(1, $orderId, PDO::PARAM_INT);
-                $orderItemsStmt->bindValue(2, $itemId, PDO::PARAM_INT);
-                // Execute for each item
-                $orderItemsStmt->execute();
-            }
-
-            // 3. Mark the items as sold in the 'items' table
-            // Reusing your existing method
-            $itemsMarkedSold = $this->markItemsAsSold($itemIds);
-
-            if (!$itemsMarkedSold) {
-                throw new Exception("Failed to mark one or more items as sold.");
-            }
-
-            // If all operations succeed, commit the transaction
-            $this->conn->commit();
-            return (int)$orderId; // Return the new order ID
-
-        } catch (Exception $e) { // Catch Exception to include custom exceptions
-            // Something went wrong, rollback the transaction
-            $this->conn->rollBack();
-            error_log("Transaction failed for createOrder: " . $e->getMessage());
-            return false; // Indicate failure
-        }
+public function createOrder(int $buyerId, array $itemIds, float $totalPrice): array
+{
+    if (empty($itemIds)) {
+        error_log("Attempted to create an order with an empty item ID array for buyer ID: " . $buyerId);
+        return ['status' => 'error', 'message' => 'Cannot create an order with no items.'];
     }
+
+    $this->conn->beginTransaction();
+
+    try {
+        // 1. Create the Order
+        $orderQuery = "INSERT INTO orders (buyer_id, total_price) VALUES (?, ?)";
+        $orderStmt = $this->conn->prepare($orderQuery);
+        $orderStmt->bindValue(1, $buyerId, PDO::PARAM_INT);
+        $orderStmt->bindValue(2, $totalPrice, PDO::PARAM_STR);
+        $orderStmt->execute();
+        $orderId = $this->conn->lastInsertId();
+
+        if (!$orderId) {
+            throw new Exception("Failed to retrieve new order ID after insertion.");
+        }
+
+        // 2. Insert into orderitems for each item
+        $orderItemsQuery = "INSERT INTO orderitems (order_id, item_id) VALUES (?, ?)";
+        $orderItemsStmt = $this->conn->prepare($orderItemsQuery);
+
+        foreach ($itemIds as $itemId) {
+            $orderItemsStmt->bindValue(1, $orderId, PDO::PARAM_INT);
+            $orderItemsStmt->bindValue(2, $itemId, PDO::PARAM_INT);
+            $orderItemsStmt->execute();
+        }
+
+        // 3. Mark the items as sold and remove them from all carts
+        $placeholder = implode(',', array_fill(0, count($itemIds), '?'));
+
+        $updateItemsQuery = "UPDATE items SET is_sold = 1 WHERE id IN ($placeholder)";
+        $updateItemsStmt = $this->conn->prepare($updateItemsQuery);
+        $updateItemsStmt->execute($itemIds);
+
+        $deleteCartQuery = "DELETE FROM cart WHERE item_id IN ($placeholder)";
+        $deleteCartStmt = $this->conn->prepare($deleteCartQuery);
+        $deleteCartStmt->execute($itemIds);
+
+        $this->conn->commit();
+        return ['status' => 'success', 'message' => 'Order created successfully.', 'order_id' => (int)$orderId];
+
+    } catch (Exception $e) {
+        $this->conn->rollBack();
+        error_log("Transaction failed for createOrder: " . $e->getMessage());
+        return ['status' => 'error', 'message' => 'Failed to process your order. Please try again later.'];
+    }
+}
     
 // In ItemClass.php
 
@@ -220,6 +217,81 @@ public function markItemsAsSold(array $itemIds): bool {
     } catch (PDOException $e) {
         error_log("Database error in markItemsAsSold: " . $e->getMessage() . " for Item IDs: " . implode(',', $itemIds));
         return false;
+    }
+}
+
+public function putItemInCart($userId, $itemId) {
+    try {
+        // 1. Check if the item is already in the cart
+        $checkQuery = "SELECT COUNT(*) FROM cart WHERE user_id = :user_id AND item_id = :item_id";
+        $checkStmt = $this->conn->prepare($checkQuery);
+        $checkStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $checkStmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
+        $checkStmt->execute();
+        $itemCount = $checkStmt->fetchColumn();
+
+        // If itemCount is greater than 0, the item already exists
+        if ($itemCount > 0) {
+            return ['status' => 'error', 'message' => 'Item is already in your cart.'];
+        }
+
+        // 2. If not, proceed with the INSERT query
+        $insertQuery = "INSERT INTO cart (user_id, item_id) VALUES (:user_id, :item_id)";
+        $insertStmt = $this->conn->prepare($insertQuery);
+        $insertStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $insertStmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
+        $insertStmt->execute();
+
+        return ['status' => 'success', 'message' => 'Item added to cart successfully.'];
+
+    } catch (PDOException $e) {
+        error_log("Database error in putItemInCart: " . $e->getMessage());
+        return ['status' => 'error', 'message' => 'Could not add item to cart.'];
+    }
+}
+
+public function getCartItems($userId) {
+    try {
+        $query = "SELECT i.*, c.id AS cart_id
+                  FROM cart c
+                  JOIN items i ON c.item_id = i.id
+                  WHERE c.user_id = :user_id";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    } catch (PDOException $e) {
+        error_log("Database error in getCartItems: " . $e->getMessage());
+        return [];
+    }
+    }
+
+public function removeItemFromCart($userId, $itemId) {
+    try {
+        $query = "DELETE FROM cart WHERE user_id = :user_id AND item_id = :item_id";
+        $stmt = $this->conn->prepare($query);
+
+        // Bind parameters securely
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
+
+        $stmt->execute();
+        $rowCount = $stmt->rowCount(); // Get the number of affected rows
+
+        if ($rowCount > 0) {
+            // An item was successfully removed
+            return ['status' => 'success', 'message' => 'Item removed from cart.'];
+        } else {
+            // No rows were affected, meaning the item wasn't in the cart
+            return ['status' => 'error', 'message' => 'Item not found in cart.'];
+        }
+
+    } catch (PDOException $e) {
+        error_log("Database error in removeItemFromCart: " . $e->getMessage());
+        return ['status' => 'error', 'message' => 'Could not remove item from cart.'];
     }
 }
 }

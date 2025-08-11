@@ -188,18 +188,18 @@ nav {
     top: 0;
     left: 0;
     right: 0;
-    height: 50px;
+    height: 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: all 0.4s ease-in-out; /* Animate height and color */
-    font-size: 20px;
+    font-size: 16px;
     z-index :1000;
 }
 
 .scrolled {
-    height: 43px;
+    height: 36px;
     opacity: 0.92;
     padding: 12px 32px; /* Reduce vertical padding to match new height */
   } 
@@ -250,18 +250,12 @@ nav .right-links a:hover {
 
 
 
-
-
-
-
-
-
-
-
 /* Cart page container */
 .cart-container {
     max-width: 1200px;
     margin: 30px auto;
+    margin-left:80px;
+    margin-right:80px;
     padding: 20px;
     background-color: #f9f9f9;
     border-radius: 8px;
@@ -279,7 +273,9 @@ nav .right-links a:hover {
 .cart-item {
     display: flex;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    margin-left: 42px;
+    margin-right: 42px;
     padding: 20px;
     background-color: #fff;
     border-radius: 8px;
@@ -353,7 +349,8 @@ nav .right-links a:hover {
     color: #fff;
     border: none;
     padding: 6px 12px;
-    font-size: 14px;
+    font-size: 24px;
+    margin-right: 42px;
     border-radius: 8px;
     font-weight: bold;
     cursor: pointer;
@@ -739,7 +736,8 @@ nav .right-links a:hover {
 }
 
 .remove-from-cart-btn {
-    padding: 8px 15px;
+    padding: 8px 16px;
+
     border: none;
     border-radius: 5px;
     cursor: pointer;

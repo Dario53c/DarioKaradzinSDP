@@ -14,6 +14,9 @@ require_once __DIR__ . '/classes/UserClass.php';
 require_once __DIR__ . '/classes/ItemClass.php';
 
 use Google\Cloud\Storage\StorageClient; 
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..'); // Assuming .env is in the project root
+$dotenv->load();
+
 
 // --- Register Services with Flight ---
 Flight::set('user', new User($pdo_conn));
@@ -200,47 +203,134 @@ Flight::route('GET /items', function() {
     }
 });
 
-Flight::route('GET /items/@id', function($id) {
-    $item = Flight::get('item');
-    $singleItem = $item->getItemById($id);
 
-    if ($singleItem) {
-        Flight::json(['status' => 'success', 'item' => $singleItem], 200);
-    } else {
-        Flight::json(['status' => 'error', 'message' => 'Item not found.'], 404);
-    }
-});
 
 
 Flight::route('POST /items/sell', function() {
-
-    if (!isset($_SESSION['user_id'])) {
+    // 1. Check if user is authenticated
+    $userId = $_SESSION['user_id'] ?? null;
+    if (!$userId) {
         Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to mark items as sold.'], 401);
         return;
     }
 
+    // 2. Validate the request data
     $request = Flight::request();
     $data = $request->data->getData();
+
     if (!isset($data['item_ids']) || !is_array($data['item_ids']) || empty($data['item_ids'])) {
         Flight::json(['status' => 'error', 'message' => 'Invalid or empty array of item IDs provided.'], 400);
         return;
     }
 
+    // New validation for total_price
+    if (!isset($data['total_price']) || !is_numeric($data['total_price']) || floatval($data['total_price']) < 0) {
+        Flight::json(['status' => 'error', 'message' => 'Invalid or missing total price.'], 400);
+        return;
+    }
+
     $itemIds = array_map('intval', $data['item_ids']);
-
+    $totalPrice = floatval($data['total_price']);
+    
+    // 3. Call the checkout method in ItemClass with the total price
     $itemService = Flight::get('item');
+    $result = $itemService->createOrder($userId, $itemIds, $totalPrice);
 
-    // 6. Call the markItemsAsSold method
-    $result = $itemService->createOrder($_SESSION['user_id'], $itemIds);
-
-    // 7. Return JSON Response based on the result
-    if ($result) { // markItemsAsSold returns true on success (if at least one row affected)
-        Flight::json(['status' => 'success', 'message' => 'Thank you for your purchase'], 200);
+    // 4. Return JSON Response based on the result
+    if ($result['status'] === 'success') {
+        Flight::json($result, 200);
     } else {
-        // This could mean a database error, or no items were found/affected (e.g., already sold)
-        Flight::json(['status' => 'error', 'message' => 'Failed to mark selected items as sold. They might not exist or already be sold.'], 500);
+        Flight::json($result, 500);
     }
 });
+
+Flight::route('POST /items/putItemInCart', function() {
+
+    // Check if user is authenticated
+    $userId = $_SESSION['user_id'] ?? null;
+    if (!$userId) {
+        Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to add items to cart.'], 401);
+        return;
+    }
+
+    // Check if item_id is provided in the request
+    $request = Flight::request();
+    $data = $request->data->getData();
+    $itemId = $data['item_id'] ?? null;
+    if (!$itemId) {
+        Flight::json(['status' => 'error', 'message' => 'Item ID is required.'], 400);
+        return;
+    }
+
+    // Call the putItemInCart method
+    $itemService = Flight::get('item');
+    $result = $itemService->putItemInCart($userId, $itemId);
+
+    // Check the 'status' key from the returned array for success or failure
+    if ($result['status'] === 'success') {
+        Flight::json($result, 200);
+    } else {
+        // If the status is 'error', use the specific message from the returned array
+        // We'll also use a specific HTTP status code for the 'already in cart' scenario
+        $statusCode = 500; // Default to a server error
+        if ($result['message'] === 'Item is already in your cart.') {
+            $statusCode = 409; // 409 Conflict is the correct HTTP status for this scenario
+        }
+        
+        Flight::json($result, $statusCode);
+    }
+});
+
+Flight::route('GET /items/cart', function() {
+    // Check if user is authenticated
+    $userId = $_SESSION['user_id'] ?? null;
+    if (!$userId) {
+        Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to view your cart.'], 401);
+        return;
+    }
+
+    // Get the cart items for the authenticated user
+    $itemService = Flight::get('item');
+    $cartItems = $itemService->getCartItems($userId);
+
+    // Return an empty array on success if no items are found
+    if (empty($cartItems)) {
+        Flight::json(['status' => 'success', 'message' => 'No items found in your cart.', 'cart_items' => []], 200);
+    } else {
+        Flight::json(['status' => 'success', 'cart_items' => $cartItems], 200);
+    }
+});
+
+
+
+Flight::route('DELETE /items/removeItemFromCart/@itemId', function($itemId) {
+    // 1. Check for authenticated user
+    $userId = $_SESSION['user_id'] ?? null;
+    if (!$userId) {
+        Flight::json(['status' => 'error', 'message' => 'Authentication required.'], 401);
+        return;
+    }
+
+    // 2. Validate the provided itemId
+    if (!is_numeric($itemId) || intval($itemId) <= 0) {
+        Flight::json(['status' => 'error', 'message' => 'Invalid item ID provided.'], 400);
+        return;
+    }
+
+    // 3. Call the method to remove the item
+    $itemService = Flight::get('item');
+    $result = $itemService->removeItemFromCart($userId, $itemId);
+
+    // 4. Return JSON response based on the result
+    if ($result['status'] === 'success') {
+        Flight::json($result, 200);
+    } else {
+        // Use a 404 if the item wasn't in the cart to begin with
+        $statusCode = ($result['message'] === 'Item not found in cart.') ? 404 : 500;
+        Flight::json($result, $statusCode);
+    }
+});
+
 
 Flight::route('GET /verify-email', function() {
     // Get email and secret from URL query parameters
@@ -355,6 +445,16 @@ Flight::route('GET /verify-email', function() {
     // --- End HTML render ---
 });
 
+Flight::route('GET /items/@id', function($id) {
+    $item = Flight::get('item');
+    $singleItem = $item->getItemById($id);
+
+    if ($singleItem) {
+        Flight::json(['status' => 'success', 'item' => $singleItem], 200);
+    } else {
+        Flight::json(['status' => 'error', 'message' => 'Item not found.'], 404);
+    }
+});
 
 //KEEP AT THE BOTTOM OF ALL ROUTES
 // Catch-all route for undefined endpoints

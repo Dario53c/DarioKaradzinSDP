@@ -4,6 +4,10 @@ require __DIR__ . '/../vendor/autoload.php';
 
 use Google\Cloud\Storage\StorageClient;
 
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..'); // Assuming .env is in the project root
+$dotenv->load();
+
+
 // Check if file was uploaded via POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_FILES['imageFile'])) {
     echo json_encode(['success' => false, 'message' => 'Invalid request or no file uploaded.']);

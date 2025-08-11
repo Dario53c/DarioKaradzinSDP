@@ -103,7 +103,7 @@ async function setupHomePage() {
     }
 }
 
-// NEW FUNCTION: Add event listeners to the "View Item" buttons on the home page
+
 async function addHomeViewItemButtonListeners() {
     // Listener for 'View Item' buttons
     document.querySelectorAll('.view-item-button').forEach(button => {
@@ -116,7 +116,7 @@ async function addHomeViewItemButtonListeners() {
     // Listener for 'Add to Cart' buttons (from a previous request)
     document.querySelectorAll('.add-to-cart-home-btn').forEach(button => {
         button.addEventListener('click', (event) => {
-            event.preventDefault(); // Prevent default button behavior
+            event.preventDefault();
             const itemId = event.target.dataset.itemId;
             addToCart(itemId);
         });
@@ -124,12 +124,11 @@ async function addHomeViewItemButtonListeners() {
 }
 
 
-let cart = {};
+// let cart = {};
 
 async function addToCart(itemId) {
-    if (cart[itemId]) {
+    /*if (cart[itemId]) {
         console.log(`Item ${itemId} is already in the cart. Quantity fixed at 1.`);
-        // Optionally, alert the user here
         alert('This item is already in your cart.');
         return;
     }
@@ -159,6 +158,41 @@ async function addToCart(itemId) {
     } catch (error) {
         console.error('Error adding item to cart:', error);
         alert('Error adding item to cart. Please try again.');
+    }*/
+
+    try {
+        const response = await fetch('php/items/putItemInCart', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ item_id: itemId })
+        });
+
+        // 1. Check for a successful HTTP status code (e.g., 200, 201)
+        if (!response.ok) {
+            // If the status is not in the 2xx range, throw an error with the status
+            const errorData = await response.json();
+            throw new Error(`Server responded with status: ${response.status} - ${errorData.message}`);
+        }
+
+        // 2. Parse the JSON response
+        const data = await response.json();
+
+        // 3. Check the application-specific status from the JSON response
+        if (data.status === 'success') {
+            alert('Item successfully added to cart!');
+            console.log(data.message);
+            // You might want to update your cart UI here
+        } else {
+            // Handle application-level errors (e.g., item already in cart, not found)
+            throw new Error(data.message || 'An unknown error occurred.');
+        }
+
+    } catch (error) {
+        // 4. Catch any network errors or errors thrown above
+        console.error('Failed to add item to cart:', error);
+        alert(`Failed to add item to cart: ${error.message}`);
     }
 }
 
@@ -166,13 +200,7 @@ async function addToCart(itemId) {
  * Removes an item from the cart.
  * @param {string} itemId The ID of the item to remove.
  */
-function removeFromCart(itemId) {
-    if (cart[itemId]) {
-        delete cart[itemId];
-        console.log(`Item ${itemId} removed from cart.`);
-        renderCart(); // Re-render the cart display
-    }
-}
+
 
 function getCartItemCount() {
     return Object.values(cart).reduce((total, item) => total + item.quantity, 0);
@@ -183,48 +211,92 @@ function getCartItemCount() {
  * Renders the cart content into the cart-container.
  */
 async function renderCart() {
-    const cartContainer = document.getElementById('content'); // Assuming 'content' is your main SPA div
-    // Make sure cart-container div is present in your html/cart.html
-    // If you plan to load html/cart.html, you'd target an inner div
-    // For now, let's assume we replace #content directly with the cart HTML.
+    const cartContainer = document.getElementById('content');
+    cartContainer.innerHTML = '<h2>Loading cart...</h2>'; // Add a loading state
 
-    let cartHtml = `
-        <div class="cart-page-wrapper">
-            <h1>Your Cart (<span id="cart-total-items">${getCartItemCount()}</span> Items)</h1>
-            <div class="cart-items-list">
-    `;
+    try {
+        const response = await fetch('php/items/cart');
+        const data = await response.json();
 
-    const itemIdsInCart = Object.keys(cart);
+        if (!response.ok) {
+            // Handle errors like 401 or 404
+            cartContainer.innerHTML = `<p class="error-message">${data.message}</p>`;
+            return;
+        }
 
-    if (itemIdsInCart.length === 0) {
-        cartHtml += '<p class="empty-cart-message">Your cart is empty.</p>';
-    } else {
+        // Get the cart items array directly from the response
+        const cartItems = data.cart_items; 
+
+        if (!cartItems || cartItems.length === 0) {
+            cartContainer.innerHTML = `
+                <div class="cart-page-wrapper">
+                    <h1>Your Cart (0 Items)</h1>
+                    <p class="empty-cart-message">Your cart is empty.</p>
+                </div>
+            `;
+            return;
+        }
+
         let cartTotal = 0;
-        for (const itemId of itemIdsInCart) {
-            const item = cart[itemId];
-            cartTotal += item.price;
+        let cartHtml = `
+            <div class="cart-page-wrapper">
+                <h1>Your Cart (${cartItems.length} Items)</h1>
+                <div class="cart-items-list">
+        `;
 
+        // Loop directly through the cartItems array
+        for (const item of cartItems) {
+            cartTotal += parseFloat(item.price);
             cartHtml += `
                 <div class="cart-item" data-item-id="${item.id}">
-                    <img src="${item.imageUrl}" alt="${item.name}" class="cart-item-image">
+                    <img src="${item.image_url}" alt="${item.name}" class="cart-item-image">
                     <div class="cart-item-details">
                         <h3>${item.name}</h3>
-                        <p>Price: $${item.price.toFixed(2)}</p>
+                        <p>Price: $${parseFloat(item.price).toFixed(2)}</p>
                     </div>
                     <button class="remove-from-cart-btn" data-item-id="${item.id}">Remove</button>
                 </div>
             `;
         }
-        cartHtml += `</div> <div class="checkout">
+        
+        cartHtml += `</div>
+            <div class="checkout">
                 <h3>Total: $<span id="cart-total-price">${cartTotal.toFixed(2)}</span></h3>
                 <button class="checkout-btn" id="checkout-btn" onclick="sellItemsInCart()">Checkout</button>
             </div>
-        </div> `;
-    }
+        </div>`;
 
-    cartContainer.innerHTML = cartHtml;
-    setTimeout(() => {removeItemFromCartListeners()},100); // Allow DOM to update before adding listeners
-    
+        cartContainer.innerHTML = cartHtml;
+        setTimeout(() => {removeItemFromCartListeners()},100); 
+
+    } catch (error) {
+        console.error('Error fetching cart items:', error);
+        cartContainer.innerHTML = `<p class="error-message">Failed to load cart. Please try again.</p>`;
+    }
+}
+
+function removeFromCart(itemId) {
+    fetch(`php/items/removeItemFromCart/${itemId}`, {
+        method: 'DELETE'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to remove item from cart.');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Item removed from cart successfully.');
+            renderCart(); // Re-render the cart to reflect changes
+        } else {
+            throw new Error(data.message || 'An unknown error occurred.');
+        }
+    })
+    .catch(error => {
+        console.error('Error removing item from cart:', error);
+        alert(`Error: ${error.message}`);
+    });
 }
 
 function removeItemFromCartListeners() {
@@ -242,33 +314,42 @@ function removeItemFromCartListeners() {
 
 
 async function sellItemsInCart() {
-    const itemIds = Object.keys(cart);
+    // 1. Get all item IDs from the rendered cart
+    const cartItems = document.querySelectorAll('.cart-item');
+    const itemIds = Array.from(cartItems).map(item => item.dataset.itemId);
+
     if (itemIds.length === 0) {
-        alert('Your cart is empty. Please add items to your cart before proceeding.');
+        alert('Your cart is empty. Please add items to checkout.');
         return;
     }
 
+    // 2. Get the total price from the rendered cart
+    const totalPriceElement = document.getElementById('cart-total-price');
+    const totalPrice = totalPriceElement ? parseFloat(totalPriceElement.innerText) : 0;
+
     try {
+        // 3. Send a POST request to the checkout endpoint
         const response = await fetch('php/items/sell', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json' // Essential for Flight to parse data correctly
+                'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ item_ids: itemIds }) // Send the array inside an object
+            body: JSON.stringify({ item_ids: itemIds, total_price: totalPrice }),
         });
 
         const data = await response.json();
 
-        if (data.status === 'success') {
-            alert(data.message);
-            // ... (handle UI update, e.g., redirect to home or re-render list) ...
-            window.location.hash = '#home';
-            cart = {};
+        // 4. Handle the server's response
+        if (response.ok) {
+            alert('Thank you for your purchase!');
+            renderCart(); 
         } else {
-            alert('Error: ' + data.message);
-            // ... (error handling) ...
+            alert(`Error during checkout: ${data.message}`);
+            console.error('Checkout error:', data.message);
         }
+
     } catch (error) {
-        // ... (network error handling) ...
+        console.error('Failed to complete checkout:', error);
+        alert('An unexpected error occurred during checkout. Please try again.');
     }
 }
