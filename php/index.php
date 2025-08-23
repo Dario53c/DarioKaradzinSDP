@@ -105,6 +105,24 @@ Flight::route('GET /user/status', function() {
     }
 });
 
+Flight::route('GET /user/profile-image', function() {
+    if (!isset($_SESSION['user_id'])) {
+        Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to view your profile.'], 401);
+        return;
+    }
+
+    $userId = $_SESSION['user_id'];
+    $item = Flight::get('item'); // This is the fix: get the 'item' service
+    
+    // Call the method on the correct service instance
+    $imageURL = $item->getUserProfileImageURL($userId);
+
+    if ($imageURL) {
+        Flight::json(['status' => 'success', 'imageUrl' => $imageURL], 200);
+    } else {
+        Flight::json(['status' => 'error', 'message' => 'User profile image not found.'], 404);
+    }
+});
 Flight::route('GET /user/verified', function() {
     if (!isset($_SESSION['user_id'])) {
         Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to view your profile.'], 401);
@@ -121,6 +139,108 @@ Flight::route('GET /user/verified', function() {
     } else {
         // This 'else' block is sending the 404.
         Flight::json(['status' => 'error', 'message' => 'User profile not found or verification status could not be retrieved.'], 404);
+    }
+});
+
+Flight::route('GET /user/details', function() {
+    if (!isset($_SESSION['user_id'])) {
+        Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to view your profile.'], 401);
+        return;
+    }
+
+    $userId = $_SESSION['user_id'];
+    $user = Flight::get('user');
+    $userData = $user->getUserById($userId);
+
+    if ($userData) {
+        Flight::json(['status' => 'success', 'user' => $userData], 200);
+    } else {
+        Flight::json(['status' => 'error', 'message' => 'User details not found.'], 404);
+    }
+});
+
+Flight::route('POST /user/update-profile-image', function() {
+    if (!isset($_SESSION['user_id'])) {
+        Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to update your profile image.'], 401);
+        return;
+    }
+
+    $userId = $_SESSION['user_id'];
+    $user = Flight::get('user');
+
+    $imageURL = Flight::request()->data->imageUrl;
+
+    // Validate that a URL was provided
+    if (!$imageURL) {
+        Flight::json(['status' => 'error', 'message' => 'Image URL is missing.'], 400);
+        return;
+    }
+
+    // Call the method to update the profile image
+    $result = $user->updateProfileImage($userId, $imageURL);
+
+    // Correctly handle the boolean result from the update function
+    if ($result) {
+        Flight::json(['status' => 'success', 'message' => 'Profile image updated successfully.'], 200);
+    } else {
+        Flight::json(['status' => 'error', 'message' => 'Failed to update profile image in the database.'], 500);
+    }
+});
+
+Flight::route('POST /user/edit-profile', function() {
+    if (!isset($_SESSION['user_id'])) {
+        Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to update your profile.'], 401);
+        return;
+    }
+
+    $userId = $_SESSION['user_id'];
+    $user = Flight::get('user');
+
+    $aboutMe = Flight::request()->data->aboutMe;
+    $username = Flight::request()->data->username;
+    $email = Flight::request()->data->email;
+
+    // Validate that aboutMe is provided
+    if (!$aboutMe || !$username || !$email) {
+        Flight::json(['status' => 'error', 'message' => 'Empty field value detected.'], 400);
+        return;
+    }
+
+    // Call the method to update the about me section
+    $result = $user->updateProfile($userId, $aboutMe, $email, $username);
+
+    if ($result) {
+        Flight::json(['status' => 'success', 'message' => 'Profile updated successfully.'], 200);
+    } else {
+        Flight::json(['status' => 'error', 'message' => 'Failed to update profile in the database.'], 500);
+    }
+});
+
+Flight::route('POST /user/change-password', function() {
+    if (!isset($_SESSION['user_id'])) {
+        Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to change your password.'], 401);
+        return;
+    }
+
+    $userId = $_SESSION['user_id'];
+    $user = Flight::get('user');
+
+    $currentPassword = Flight::request()->data->currentPassword;
+    $newPassword = Flight::request()->data->newPassword;
+
+    // Validate that current and new passwords are provided
+    if (!$currentPassword || !$newPassword) {
+        Flight::json(['status' => 'error', 'message' => 'Current and new passwords are required.'], 400);
+        return;
+    }
+
+    // Call the method to change the password
+    $result = $user->changePassword($userId, $currentPassword, $newPassword);
+
+    if ($result) {
+        Flight::json(['status' => 'success', 'message' => 'Password changed successfully.'], 200);
+    } else {
+        Flight::json(['status' => 'error', 'message' => 'Current password is incorrect.'], 500);
     }
 });
 
@@ -204,18 +324,13 @@ Flight::route('GET /items', function() {
     }
 });
 
-
-
-
 Flight::route('POST /items/sell', function() {
-    // 1. Check if user is authenticated
     $userId = $_SESSION['user_id'] ?? null;
     if (!$userId) {
-        Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in to mark items as sold.'], 401);
+        Flight::json(['status' => 'error', 'message' => 'Authentication required. Please log in.'], 401);
         return;
     }
 
-    // 2. Validate the request data
     $request = Flight::request();
     $data = $request->data->getData();
 
@@ -223,21 +338,27 @@ Flight::route('POST /items/sell', function() {
         Flight::json(['status' => 'error', 'message' => 'Invalid or empty array of item IDs provided.'], 400);
         return;
     }
-
-    // New validation for total_price
     if (!isset($data['total_price']) || !is_numeric($data['total_price']) || floatval($data['total_price']) < 0) {
         Flight::json(['status' => 'error', 'message' => 'Invalid or missing total price.'], 400);
         return;
     }
-
+    
+    // Updated validation for shipping_details using array syntax
+    if (!isset($data['shipping_details']) || !is_array($data['shipping_details']) ||
+        !isset($data['shipping_details']['name']) || !isset($data['shipping_details']['address']) ||
+        !is_array($data['shipping_details']['address']) || !isset($data['shipping_details']['address']['street']) ||
+        !isset($data['shipping_details']['address']['city']) || !isset($data['shipping_details']['address']['zip'])) {
+        Flight::json(['status' => 'error', 'message' => 'Invalid or missing shipping details.'], 400);
+        return;
+    }
+    
     $itemIds = array_map('intval', $data['item_ids']);
     $totalPrice = floatval($data['total_price']);
+    $shippingDetails = $data['shipping_details'];
     
-    // 3. Call the checkout method in ItemClass with the total price
     $itemService = Flight::get('item');
-    $result = $itemService->createOrder($userId, $itemIds, $totalPrice);
+    $result = $itemService->createOrder($userId, $itemIds, $totalPrice, $shippingDetails);
 
-    // 4. Return JSON Response based on the result
     if ($result['status'] === 'success') {
         Flight::json($result, 200);
     } else {
@@ -454,6 +575,48 @@ Flight::route('GET /items/@id', function($id) {
         Flight::json(['status' => 'success', 'item' => $singleItem], 200);
     } else {
         Flight::json(['status' => 'error', 'message' => 'Item not found.'], 404);
+    }
+});
+
+\Stripe\Stripe::setApiKey($_ENV['CLIENT_SECRET']);
+Flight::route('POST /create-payment-intent', function() {
+    // Retrieve the JSON body from the request
+    $jsonStr = Flight::request()->body;
+    $data = json_decode($jsonStr);
+
+    // Basic validation
+    if (!isset($data->amount)) {
+        Flight::json(['status' => 'error', 'message' => 'Amount is missing from the request.'], 400);
+        return;
+    }
+
+    $amountInCents = intval($data->amount);
+
+    if ($amountInCents <= 0) {
+        Flight::json(['status' => 'error', 'message' => 'Amount must be a positive integer.'], 400);
+        return;
+    }
+
+    try {
+        // Create the PaymentIntent with the Stripe API
+        $paymentIntent = \Stripe\PaymentIntent::create([
+            'amount' => $amountInCents,
+            'currency' => 'usd', // Adjust to your currency
+            'automatic_payment_methods' => [
+                'enabled' => true,
+            ],
+            // You can add more options here, like `description`, `metadata`, etc.
+        ]);
+
+        // Return the client secret to the frontend
+        Flight::json([
+            'status' => 'success',
+            'clientSecret' => $paymentIntent->client_secret,
+        ]);
+
+    } catch (\Stripe\Exception\ApiErrorException $e) {
+        error_log('Stripe API Error: ' . $e->getMessage());
+        Flight::json(['status' => 'error', 'message' => 'Failed to create payment intent.'], 500);
     }
 });
 

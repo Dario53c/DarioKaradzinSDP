@@ -1,0 +1,24 @@
+<div class="profile-details">
+    <div class="profile-header">
+        <div class="profile-image-container">
+            <img src="images/default_pfp.jpg" alt="Profile Picture" class="profile-picture" id="profile-image">
+            <img src="images/edit-icon.png" alt="Edit Icon" class="edit-icon">
+            <span class="tooltiptext">Edit Profile Picture</span>
+        </div>
+        <input type="file" id="file-input" accept="image/*" style="display: none;">
+        <div class="profile-info">
+            <h1 class="profile-name" id="profile-username">Loading...</h1>
+            <p class="profile-email" id = "profile-email">Loading...</p>
+        </div>
+    </div>
+    <div class="profile-bio">
+        <h2>About Me</h2>
+        <div class="about-me-container">
+            <p id="profile-about-me">Loading...</p>
+        </div>
+    </div>
+    <div class="edit-profile-btns">
+        <button class="edit-profile-btn" id="update-profile-btn" onclick="editProfile()">Edit Profile</button>
+        <button class="edit-profile-btn" id="change-password-btn" onclick="changePassword()">Change Password</button>
+    </div>
+</div>

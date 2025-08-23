@@ -247,7 +247,20 @@ nav .right-links a:hover {
     border-width: 2px; 
 }
 
+.profile-pfp {
+    width: 40px;          
+    height: 40px;         
+    border-radius: 50%;   
+    object-fit: cover;    
+    margin-right: 8px;  
+    
+}
 
+.profile-pfp:hover {
+    transform: scale(1.05);
+    transition: transform 0.3s ease-in-out;
+    cursor:pointer;
+}
 
 
 /* Cart page container */
@@ -775,4 +788,362 @@ nav .right-links a:hover {
 
 .cart-item-details {
     flex-grow: 1; /* Allows details to take up available space */
+}
+
+.profile-details {
+    margin-top: 12vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+.profile-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.profile-name {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+}
+
+.profile-email {
+    font-size: 1em;
+    color: #777;
+    margin-top: 5px;
+}
+
+.profile-bio {
+    width: 80%;
+    margin-bottom: 16px;;
+    line-height: 1.6;
+    color: #555;
+}
+
+.profile-bio h2 {
+    margin-bottom: 0; /* Adjust this value as needed */
+}
+
+.profile-bio p {
+    margin-top: 2px; /* Remove default margin */
+}
+.edit-profile-btn {
+    background-color: #4a90e2;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.edit-profile-btn:hover {
+    background-color: #357bd8;
+    
+}
+
+.profile-image-container {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    border: 4px solid #4a90e2;
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    margin-bottom: 16px;
+}
+.profile-picture {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 15px;
+    transition: opacity 0.3s ease;
+}
+
+
+.edit-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Centers the icon perfectly */
+    width: 30px; /* Adjust size as needed */
+    height: 30px;
+    opacity: 0; /* Initially hidden */
+    transition: opacity 0.3s ease;
+}
+
+/* On hover, fade the profile picture and show the edit icon */
+.profile-image-container:hover .profile-picture {
+    opacity: 0.5;
+}
+
+.profile-image-container:hover .edit-icon {
+    opacity: 1;
+}
+
+.username-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px; /* Space between username and button */
+}
+
+#about-me-textarea {
+    width: 50%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: Arial, sans-serif;
+    resize: vertical;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+
+#about-me-textarea:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+    outline: none;
+}
+
+#about-me-textarea::placeholder {
+    color: #999;
+}
+
+.edit-profile-btns{
+    display:flex;
+    flex-direction: row;
+    gap:8px;
+}
+
+.profile-info input[type="text"],
+.profile-info input[type="email"],
+.profile-info input[type="password"] {
+    width: 100%; /* Make inputs fill their container */
+    padding: 8px;
+    margin-bottom: 8px; /* Space between the inputs */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box; /* Ensures padding and border are included in the width */
+}   
+
+.profile-info input[type="text"]:focus,
+.profile-info input[type="email"]:focus,
+.profile-info input[type="password"]:focus {
+    border-color: #4a90e2; /* Blue border on focus */
+    outline: none; /* Removes the default outline */
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5); /* Subtle blue glow */
+}
+
+.profile-image-container .tooltiptext {
+  visibility: hidden;
+  width: 80px;;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  font-size:12px;
+
+  /* Position the tooltip */
+  position: absolute;
+  z-index: 1;
+}
+
+.profile-image-container:hover .tooltiptext {
+  visibility: visible;
+}
+.searchBySeller {
+    padding: 12px;
+    margin-left:8px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: #fff;
+    box-sizing: border-box; /* Ensures padding/margin doesn't affect overall width */
+}
+
+.success-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 40px 20px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    margin: 40px auto;
+}
+
+.success-icon {
+    font-size: 80px;
+    color: #28a745;
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-size: 2.5em;
+    color: #28a745;
+    margin-bottom: 10px;
+}
+
+p {
+    font-size: 1.1em;
+    line-height: 1.6;
+    color: #6c757d;
+    margin-bottom: 25px;
+}
+
+.cta-buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.button {
+    text-decoration: none;
+    color: #ffffff;
+    background-color: #007bff;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.button:hover {
+    background-color: #0056b3;
+}
+
+.cart-page-wrapper{
+    margin-top:80px;
+}
+
+.cart-page-wrapper h1{
+    color: #333;
+}
+
+.payment-form {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70%;
+    max-height: 80vh;
+    overflow-y: auto;
+    max-width: 600px;
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
+.overlay {
+    display: none; /* Initially hidden */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4); /* A semi-transparent black overlay */
+    backdrop-filter: blur(5px); /* Adds a blurry effect to the content behind it */
+    z-index: 999; /* Place it just behind the payment form */
+}
+
+#payment-load {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    font-size: 24px;
+    color: #333;
+    z-index: 1001; /* Ensure it's above the overlay */
+}
+
+#payment-message {
+    color: #e74c3c; /* Red color for error messages */
+    margin-top: 12px;
+    font-size: 1em;
+    text-align: center;
+}
+
+#address-details {
+    width: 100%;
+    margin-top: 104px;
+    margin-bottom: 24px;
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+#address-details h3 {
+    font-size: 16px;
+    color: #555;
+    margin-top: 0;
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+#address-details input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box; /* Ensures padding doesn't affect total width */
+    font-size: 1em;
+}
+
+#address-details input::placeholder {
+    color: #a0a0a0;
+}
+
+#submit-button {
+    width: 20%;
+    padding: 12px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: #007bff;
+    color: white;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+#submit-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+#submit-button:active {
+    background-color: #004085;
+    transform: translateY(0);
+}
+
+#submit-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
 }

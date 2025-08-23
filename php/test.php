@@ -14,20 +14,26 @@ require_once __DIR__ . "/classes/ItemClass.php";
 $user = new User($pdo_conn);
 $item = new Item($pdo_conn);
 
-$cartItems = $item->getCartItems(1); // Store the returned array in a variable
+// Set the Content-Type header to application/json
+header('Content-Type: application/json');
 
-// Check if any items were found before trying to loop
-if (empty($cartItems)) {
-    echo "No items found in the cart.";
+// Get the user ID from the session, default to null if not set
+$userId = $_SESSION['user_id'] ?? null;
+
+// If there's no user ID, return an error
+if (!$userId) {
+    echo json_encode(['status' => 'error', 'message' => 'User not logged in.']);
+    exit;
+}
+
+$imageURL = $item->getUserProfileImageURL($userId);
+
+// Check if a valid URL was returned
+if ($imageURL) {
+    // Return a success JSON response with the image URL
+    echo json_encode(['status' => 'success', 'imageUrl' => $imageURL]);
 } else {
-    // Loop through each item in the array
-    foreach ($cartItems as $cartItem) {
-        // Now you can echo specific properties of each item
-        echo "Item ID: " . htmlspecialchars($cartItem['id']) . "<br>";
-        echo "Name: " . htmlspecialchars($cartItem['name']) . "<br>";
-        echo "Price: $" . htmlspecialchars($cartItem['price']) . "<br>";
-        echo "Image URL: " . htmlspecialchars($cartItem['image_url']) . "<br>";
-        echo "--------------------------<br>";
-    }
+    // Return an error JSON response if no image URL was found or an error occurred
+    echo json_encode(['status' => 'error', 'message' => 'No profile image found.']);
 }
 ?>

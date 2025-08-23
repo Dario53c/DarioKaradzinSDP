@@ -123,7 +123,7 @@ class Item {
         }
     }
 
-public function createOrder(int $buyerId, array $itemIds, float $totalPrice): array
+public function createOrder(int $buyerId, array $itemIds, float $totalPrice, array $shippingDetails): array
 {
     if (empty($itemIds)) {
         error_log("Attempted to create an order with an empty item ID array for buyer ID: " . $buyerId);
@@ -133,11 +133,23 @@ public function createOrder(int $buyerId, array $itemIds, float $totalPrice): ar
     $this->conn->beginTransaction();
 
     try {
-        // 1. Create the Order
-        $orderQuery = "INSERT INTO orders (buyer_id, total_price) VALUES (?, ?)";
+        // Extract shipping details from the object
+        $shippingName = $shippingDetails['name'];
+        $shippingStreet = $shippingDetails['address']['street'];
+        $shippingCity = $shippingDetails['address']['city'];
+        $shippingState = $shippingDetails['address']['state'];
+        $shippingZip = $shippingDetails['address']['zip'];
+        
+        // 1. Create the Order with shipping details
+        $orderQuery = "INSERT INTO orders (buyer_id, total_price, shipping_name, shipping_street, shipping_city, shipping_state, shipping_zip) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $orderStmt = $this->conn->prepare($orderQuery);
         $orderStmt->bindValue(1, $buyerId, PDO::PARAM_INT);
         $orderStmt->bindValue(2, $totalPrice, PDO::PARAM_STR);
+        $orderStmt->bindValue(3, $shippingName, PDO::PARAM_STR);
+        $orderStmt->bindValue(4, $shippingStreet, PDO::PARAM_STR);
+        $orderStmt->bindValue(5, $shippingCity, PDO::PARAM_STR);
+        $orderStmt->bindValue(6, $shippingState, PDO::PARAM_STR);
+        $orderStmt->bindValue(7, $shippingZip, PDO::PARAM_STR);
         $orderStmt->execute();
         $orderId = $this->conn->lastInsertId();
 
@@ -269,29 +281,50 @@ public function getCartItems($userId) {
     }
     }
 
-public function removeItemFromCart($userId, $itemId) {
-    try {
-        $query = "DELETE FROM cart WHERE user_id = :user_id AND item_id = :item_id";
-        $stmt = $this->conn->prepare($query);
+    public function removeItemFromCart($userId, $itemId) {
+        try {
+            $query = "DELETE FROM cart WHERE user_id = :user_id AND item_id = :item_id";
+            $stmt = $this->conn->prepare($query);
 
-        // Bind parameters securely
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
+            // Bind parameters securely
+            $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+            $stmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
 
-        $stmt->execute();
-        $rowCount = $stmt->rowCount(); // Get the number of affected rows
+            $stmt->execute();
+            $rowCount = $stmt->rowCount(); // Get the number of affected rows
 
-        if ($rowCount > 0) {
-            // An item was successfully removed
-            return ['status' => 'success', 'message' => 'Item removed from cart.'];
-        } else {
-            // No rows were affected, meaning the item wasn't in the cart
-            return ['status' => 'error', 'message' => 'Item not found in cart.'];
+            if ($rowCount > 0) {
+                // An item was successfully removed
+                return ['status' => 'success', 'message' => 'Item removed from cart.'];
+            } else {
+                // No rows were affected, meaning the item wasn't in the cart
+                return ['status' => 'error', 'message' => 'Item not found in cart.'];
+            }
+
+        } catch (PDOException $e) {
+            error_log("Database error in removeItemFromCart: " . $e->getMessage());
+            return ['status' => 'error', 'message' => 'Could not remove item from cart.'];
         }
-
-    } catch (PDOException $e) {
-        error_log("Database error in removeItemFromCart: " . $e->getMessage());
-        return ['status' => 'error', 'message' => 'Could not remove item from cart.'];
     }
-}
+
+    public function getUserProfileImageURL($userId){
+        try {
+            $query = "SELECT profile_pic_url FROM users WHERE id = :user_id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($result && isset($result['profile_pic_url'])) {
+                return $result['profile_pic_url'];
+            } else {
+                return null; // No profile image found
+            }
+
+        } catch (PDOException $e) {
+            error_log("Database error in getUserProfileImageURL: " . $e->getMessage());
+            return null; // Error occurred, return null
+    }
+    }
 }

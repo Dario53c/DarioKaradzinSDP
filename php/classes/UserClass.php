@@ -175,6 +175,70 @@ class User {
         }
     }
 
+    public function getUserById(int $id): ?array {
+        try {
+            $stmt = $this->conn->prepare("SELECT * FROM users WHERE id = :id");
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (PDOException $e) {
+            error_log("Error fetching user by ID: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function updateProfileImage(int $userId, string $imagePath): bool {
+        try {
+            $stmt = $this->conn->prepare("UPDATE users SET profile_pic_url = :profile_image WHERE id = :id");
+            $stmt->bindParam(':profile_image', $imagePath, PDO::PARAM_STR);
+            $stmt->bindParam(':id', $userId, PDO::PARAM_INT);
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error updating profile image: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function updateProfile(int $userId, string $aboutMe, string $email, string $username): bool {
+        try {
+            $stmt = $this->conn->prepare("UPDATE users SET about_me = :about_me, email = :email, username = :username WHERE id = :id");
+            $stmt->bindParam(':about_me', $aboutMe, PDO::PARAM_STR);
+            $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+            $stmt->bindParam(':username', $username, PDO::PARAM_STR);
+            $stmt->bindParam(':id', $userId, PDO::PARAM_INT);
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error updating profile: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function changePassword(int $userId, string $currentPassword, string $newPassword): bool {
+        try {
+            // Fetch the current password hash
+            $stmt = $this->conn->prepare("SELECT password_hash FROM users WHERE id = :id");
+            $stmt->bindParam(':id', $userId, PDO::PARAM_INT);
+            $stmt->execute();
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user || !password_verify($currentPassword, $user['password_hash'])) {
+                return false;
+            }
+
+            // Hash the new password
+            $newPasswordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+
+            // Update the password
+            $updateStmt = $this->conn->prepare("UPDATE users SET password_hash = :new_password WHERE id = :id");
+            $updateStmt->bindParam(':new_password', $newPasswordHash, PDO::PARAM_STR);
+            $updateStmt->bindParam(':id', $userId, PDO::PARAM_INT);
+            return $updateStmt->execute();
+        } catch (PDOException $e) {
+            error_log("Error changing password: " . $e->getMessage());
+            return false;
+        }
+    }
+
     public function sendMailjetVerificationEmail($toEmail, $secret, $toName = '') {
     try {
 

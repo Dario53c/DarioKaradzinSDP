@@ -62,6 +62,11 @@ async function loadPage(page) {
         else if (page === 'cart') {
             renderCart(); // Ensure cart is rendered when the cart page is loaded
         }
+        else if (page === 'profile') {
+            setupProfilePage();
+        } else if (page === 'success') {
+            setupSuccessfulTransactionPage();
+        }
     } catch (error) {
         document.getElementById('content').innerHTML = "<h1>404 - Page Not Found</h1>";
     }
@@ -89,7 +94,52 @@ window.addEventListener('load', () => {
     filterCategory('all');
 });
 
+// Define the expected value for each item characteristic
+const itemValueMap = {
+    // Base values for categories
+    '1': 20, // Shirts
+    '2': 25, // Pants
+    '3': 40, // Shoes
+    '4': 50, // Jackets
+    '5': 15, // Accessories
+    '6': 35, // Dresses
+    '7': 10, // Hats
+    '8': 30, // Sportswear
 
+    // Multipliers for condition
+    'Factory New': 2.0,
+    'Minimal Wear': 1.5,
+    'Used': 1.0,
+    'Well Worn': 0.8,
+    'Worn Out': 0.5,
+
+    // Multipliers for brand
+    'Yes': 1.5,
+    'No': 1.0,
+};
+
+function calculateExpectedPrice() {
+    // Get all the relevant input values from the form
+    const categoryValue = document.getElementById('item-category').value;
+    const conditionValue = document.getElementById('item-condition').value;
+    const brandValue = document.getElementById('item-brand').value;
+
+    let basePrice = 0;
+    
+    // Check if values exist in the map before adding to the price
+    if (itemValueMap[categoryValue]) {
+        basePrice += itemValueMap[categoryValue];
+    }
+    
+    // Apply the condition multiplier
+    let finalPrice = basePrice * (itemValueMap[conditionValue] || 1.0);
+    
+    // Apply the brand multiplier
+    finalPrice = finalPrice * (itemValueMap[brandValue] || 1.0);
+
+    // Ensure the price is a positive number
+    return finalPrice;
+}
 
 function attachFormHandlers() {
     const loginForm = document.getElementById('loginForm');
@@ -229,6 +279,25 @@ function attachFormHandlers() {
         if (!postItemForm.hasAttribute('data-submit-listener-attached')) {
             postItemForm.addEventListener('submit', async function(event) {
                 event.preventDefault(); // Stop the browser's default form submission
+
+                const expectedPrice = calculateExpectedPrice();
+                const userPrice = parseFloat(document.getElementById('item-price').value);
+
+                // Validation for prices
+                if (userPrice > (expectedPrice * 2)) {
+                    alert("We don't support scams on our site. The price is too high based on our internal value calculation.");
+                    return;
+                }
+
+                if (userPrice < (expectedPrice * 0.5)) {
+                    const userConfirmation = confirm(
+                        `We believe this item's value is worth more than the set price of $${userPrice.toFixed(2)}. The recommended price is $${expectedPrice.toFixed(2)}. Do you wish to continue with the price you have set?`
+                    );
+                    if (!userConfirmation) {
+                        return;
+                    }
+                }
+
                 const files = fileInput.files;
                 if (files.length === 0) {
                     alert('Please select an image file to upload.');
@@ -313,85 +382,91 @@ function attachFormHandlers() {
 }
 
 // Function to update navbar based on user login state
-function updateNavbarForUser() {
-    fetch('php/user/status')
-        .then(response => response.json())
-        .then(data => {
-            const rightLinks = document.querySelector('.right-links');
+// A separate async function to handle the entire navbar update logic
+async function updateNavbarForUser() {
+    const rightLinks = document.querySelector('.right-links');
+    const leftLinks = document.querySelector('.left-links');
 
-            if (data.loggedIn) {
-                // User is logged in, now check verification status
-                fetch('php/user/verified') // Fetch the verification status
-                    .then(response => response.json())
-                    .then(verificationData => {
-                        let navHtml = `<span class="welcome_text">Welcome, ${data.username}</span> `;
+    try {
+        // Fetch the user status first
+        const statusResponse = await fetch('php/user/status');
+        const statusData = await statusResponse.json();
 
-                        if (verificationData.status === 'success' && verificationData.verified == 1) {
-                            navHtml = `<span class="welcome_text">Welcome, ${data.username} &#10003;</span> `;
-                        } else if (verificationData.status === 'success' && verificationData.verified == 0) {
-                            navHtml += `<a href="#verify" class="verify-link">Verify Account</a> `; // Dummy link
-                        }
+        if (statusData.loggedIn) {
+            let navHtml = `<span class="welcome_text">Welcome, ${statusData.username}</span> `;
 
-                        navHtml += `<a href="#" id="logoutBtn">Logout</a>`;
-                        rightLinks.innerHTML = navHtml;
+            // Fetch verification status only if the user is logged in
+            const verificationResponse = await fetch('php/user/verified');
+            const verificationData = await verificationResponse.json();
 
-                        const logoutBtn = document.getElementById('logoutBtn');
-                        logoutBtn.addEventListener('click', () => {
-                            fetch('php/logout')
-                                .then(() => {
-                                    window.location.hash = 'login';
-                                    updateNavbarForUser(); // Re-run to update to logged-out state
-                                })
-                                .catch(error => {
-                                    console.error('Logout error:', error);
-                                    // Potentially display a user-friendly message
-                                });
-                        });
-
-                        const verifyLink = document.querySelector('.verify-link');
-                        if (verifyLink) {
-                            verifyLink.removeEventListener('click', handleVerifyLinkClick);
-                            verifyLink.addEventListener('click', handleVerifyLinkClick);
-                        }
-
-                    })
-                    .catch(error => {
-                        console.error('Error fetching verification status:', error);
-                        // If there's an error fetching verification status,
-                        // just show the basic logged-in state without verification info.
-                        rightLinks.innerHTML = `<span class="welcome_text">Welcome, ${data.username}</span> <a href="#" id="logoutBtn">Logout</a>`;
-
-                        const logoutBtn = document.getElementById('logoutBtn');
-                        logoutBtn.addEventListener('click', () => {
-                            fetch('php/logout')
-                                .then(() => {
-                                    window.location.hash = 'login';
-                                    updateNavbarForUser();
-                                });
-                        });
-                    });
-
-            } else {
-                // User is not logged in
-                rightLinks.innerHTML = `
-                    <a href="#register">Register</a>
-                    <a href="#login">Log in</a>
-                `;
+            // Handle verification status
+            if (verificationData.status === 'success' && verificationData.verified == 1) {
+                navHtml = `<span class="welcome_text">Welcome, ${statusData.username} &#10003;</span> `;
+            } else if (verificationData.status === 'success' && verificationData.verified == 0) {
+                navHtml += `<a href="#" class="verify-link">Verify Account</a> `;
             }
-        })
-        .catch(error => {
-            console.error('Error fetching user status:', error);
-            // Handle initial fetch error (e.g., network issue, server down)
-            const rightLinks = document.querySelector('.right-links');
+
+            // Always add the logout button
+            navHtml += `<a href="#" id="logoutBtn">Log out</a>`;
+            rightLinks.innerHTML = navHtml;
+
+            // Handle profile picture, but only if it doesn't already exist
+            if (!leftLinks.querySelector('.profile-pfp')) {
+                const profileImageResponse = await fetch('php/user/profile-image');
+                const profileImageData = await profileImageResponse.json();
+                console.log('Profile image data:', profileImageData);
+                if (profileImageData.status === 'success' && profileImageData.imageUrl) {
+                    const profileImage = document.createElement('img');
+                    profileImage.src = profileImageData.imageUrl;
+                    profileImage.alt = 'Profile Picture';
+                    profileImage.classList.add('profile-pfp');
+                    profileImage.removeEventListener('click', changeLocationToProfile);
+                    profileImage.addEventListener('click', changeLocationToProfile);
+                    leftLinks.prepend(profileImage);
+                }
+            }
+
+            // Add event listeners after elements are in the DOM
+            const logoutBtn = document.getElementById('logoutBtn');
+            logoutBtn.addEventListener('click', async () => {
+                await fetch('php/logout');
+                window.location.hash = 'login';
+                updateNavbarForUser(); // Update to reflect logged-out state
+            });
+
+            const verifyLink = document.querySelector('.verify-link');
+            if (verifyLink) {
+                // Assuming handleVerifyLinkClick is defined elsewhere
+                verifyLink.addEventListener('click', handleVerifyLinkClick);
+            }
+
+        } else {
+            // User is not logged in
             rightLinks.innerHTML = `
                 <a href="#register">Register</a>
                 <a href="#login">Log in</a>
-                <span style="color: red; margin-left: 10px;">(API Error)</span>
             `;
-        });
+            // If the user logs out, remove the profile picture from the left links
+            const existingPfp = leftLinks.querySelector('.profile-pfp');
+            if (existingPfp) {
+                existingPfp.remove();
+            }
+        }
+    } catch (error) {
+        console.error('An error occurred during navbar update:', error);
+        // Handle all errors here, providing a fallback for the user
+        rightLinks.innerHTML = `
+            <a href="#register">Register</a>
+            <a href="#login">Log in</a>
+            <span style="color: red; margin-left: 10px;">(API Error)</span>
+        `;
+    }
 }
 
-
+function changeLocationToProfile(event) {
+    event.preventDefault();
+    window.location.hash = 'profile';
+}
 
 function handleVerifyLinkClick(event) {
     event.preventDefault();
@@ -414,3 +489,308 @@ function handleVerifyLinkClick(event) {
             alert('An error occurred while sending the verification email. Please try again later.');
         });
 }
+
+// Profile Page Setup
+async function setupProfilePage() {
+    const response = await fetch('php/user/details');
+    if (!response.ok) {
+        throw new Error('Failed to fetch user details');
+    }
+
+    const userDetails = await response.json();
+    if (userDetails.status !== 'success' || !userDetails.user) {
+        throw new Error(userDetails.message || 'Failed to load user details');
+    }
+
+    const user = userDetails.user;
+    document.getElementById('profile-image').src = user.profile_pic_url;
+    document.getElementById('profile-username').textContent = "Username: " + user.username;
+    document.getElementById('profile-email').textContent = "email: " + user.email;
+    document.getElementById('profile-about-me').textContent = user.About_me;
+
+    const profileImageContainer = document.querySelector('.profile-image-container');
+    const fileInput = document.getElementById('file-input');
+    profileImageContainer.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    fileInput.removeEventListener('change', handleImageChange);
+    fileInput.addEventListener('change', handleImageChange);
+}
+
+
+async function handleImageChange(event) {
+    const selectedFile = event.target.files[0];
+    if (!selectedFile) {
+        return; // Exit if no file was selected
+    }
+
+    // Optional: Immediately display a local preview for user feedback
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('profile-image').src = e.target.result;
+        document.querySelector('.left-links .profile-pfp').src = e.target.result;
+    };
+    reader.readAsDataURL(selectedFile);
+
+    // Step 1: Upload the image to the server and get its URL
+    try {
+        // Change 'profileImage' to 'imageFile' to match the PHP backend
+        const formData = new FormData();
+        formData.append('imageFile', selectedFile);
+
+        const uploadResponse = await fetch('php/upload.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        // Check for HTTP errors from the upload
+        if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json();
+            throw new Error(errorData.message || `HTTP error! Status: ${uploadResponse.status}`);
+        }
+
+        const uploadResult = await uploadResponse.json();
+
+        if (uploadResult.success && uploadResult.imageUrl) {
+            console.log('Image uploaded successfully. URL:', uploadResult.imageUrl);
+            
+            // Step 2: Send the new image URL to the database
+            const dbUpdateResponse = await fetch('php/user/update-profile-image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ imageUrl: uploadResult.imageUrl })
+            });
+
+            if (!dbUpdateResponse.ok) {
+                const dbErrorData = await dbUpdateResponse.json();
+                throw new Error(dbErrorData.message || `HTTP error! Status: ${dbUpdateResponse.status}`);
+            }
+
+            const dbUpdateResult = await dbUpdateResponse.json();
+
+            if (dbUpdateResult.status === 'success') {
+                console.log('Profile image updated successfully.');
+            } else {
+                alert(`Database update failed: ${dbUpdateResult.message}`);
+            }
+        } else {
+            alert(`Upload failed: ${uploadResult.message}`);
+            console.error('Upload error:', uploadResult.message);
+        }
+    } catch (error) {
+        alert(`An error occurred: ${error.message}`);
+        console.error('Fetch error:', error);
+    }
+}
+
+function editProfile(){
+    const updateBtns = document.querySelector('.edit-profile-btns');
+    updateBtns.style.display = 'none';
+
+    username = document.getElementById('profile-username').textContent.replace('Username: ', '');
+    email = document.getElementById('profile-email').textContent.replace('email: ', '');
+    const profileInfo = document.querySelector('.profile-info');
+    profileInfo.innerHTML = `
+        <input type="text" id="profile-username-input" value="${username}" />
+        <br>
+        <input type="email" id="profile-email-input" value="${email}" />
+    `
+    aboutMe = document.getElementById('profile-about-me').textContent;
+    aboutMeArea = document.querySelector('.about-me-container');
+    aboutMeArea.innerHTML = `
+        <textarea id="about-me-textarea" rows="5" cols="50">${aboutMe}</textarea>
+        <br>
+        <button class="edit-profile-btn" id="save-about-me-btn" onclick="saveProfileChanges()">Save</button>
+        <button class="edit-profile-btn" id="cancel-changes" onclick="cancelChanges()">Cancel</button>`;
+}
+
+function cancelChanges() {
+    const updateBtns = document.querySelector('.edit-profile-btns');
+    updateBtns.style.display = 'block';
+
+    const profileInfo = document.querySelector('.profile-info');
+    profileInfo.innerHTML = `
+        <h1 class="profile-name" id="profile-username">Username: ${username}</h1>
+        <p class="profile-email" id="profile-email">email: ${email}</p>
+    `;
+
+    const aboutMeArea = document.querySelector('.about-me-container');
+    aboutMeArea.innerHTML = `
+        <p id="profile-about-me">${aboutMe}</p>`;
+}
+
+async function saveProfileChanges() {
+    const aboutMeTextarea = document.getElementById('about-me-textarea');
+    const aboutMeText = aboutMeTextarea.value.trim();
+    const usernameInput = document.getElementById('profile-username-input').value.trim();
+    const emailInput = document.getElementById('profile-email-input').value.trim();
+
+    if (aboutMeText === '') {
+        alert('About Me section cannot be empty.');
+        return;
+    } else if( aboutMeText.length > 255) {
+        alert('About Me section cannot exceed 255 characters.');
+        return;
+    }
+
+    if(usernameInput.length < 3) {
+        alert('Username must be atleast 3 characters');
+        return;
+    }
+
+    if (!isValidEmail(emailInput)) {
+        alert('Please enter a valid email address.');
+        return;
+    }
+
+    try {
+        const response = await fetch('php/user/edit-profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ aboutMe: aboutMeText, username: usernameInput, email: emailInput })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.status === 'success') {
+            alert(result.message);
+            const content = document.getElementById('content');
+            content.innerHTML = `<div class="profile-details">
+                <div class="profile-header">
+                    <div class="profile-image-container">
+                        <img src="images/default_pfp.jpg" alt="Profile Picture" class="profile-picture" id="profile-image">
+                        <img src="images/edit-icon.png" alt="Edit Icon" class="edit-icon">
+                        <span class="tooltiptext">Edit Profile Picture</span>
+                    </div>
+                    <input type="file" id="file-input" accept="image/*" style="display: none;">
+                    <div class="profile-info">
+                        <h1 class="profile-name" id="profile-username">Loading...</h1>
+                        <p class="profile-email" id = "profile-email">Loading...</p>
+                    </div>
+                </div>
+                <div class="profile-bio">
+                    <h2>About Me</h2>
+                    <div class="about-me-container">
+                        <p id="profile-about-me">Loading...</p>
+                    </div>
+                </div>
+                <div class="edit-profile-btns">
+                    <button class="edit-profile-btn" id="update-profile-btn" onclick="editProfile()">Edit Profile</button>
+                    <button class="edit-profile-btn" id="change-password-btn" onclick="changePassword()">Change Password</button>
+                </div>
+            </div>`;
+            setupProfilePage();
+        } else {
+            alert(`Update failed: ${result.message}`);
+        }
+    } catch (error) {
+        alert(`An error occurred: ${error.message}`);
+        console.error('Fetch error:', error);
+    }
+}
+
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function changePassword(){
+    const updateBtns = document.querySelector('.edit-profile-btns');
+    updateBtns.style.display = 'none';
+
+    const aboutme = document.querySelector('.profile-bio');
+    aboutme.style.display = 'none';
+
+    const profileInfo = document.querySelector('.profile-info');
+    profileInfo.innerHTML = `
+        <input type="password" id="current-password" placeholder="Current Password" />
+        <br>
+        <input type="password" id="new-password" placeholder="New Password" />
+        <br>
+        <input type="password" id="confirm-new-password" placeholder="Confirm New Password" />
+        <br>
+        <button class="edit-profile-btn" id="save-password-btn" onclick="savePasswordChanges()">Save</button>
+        <button class="edit-profile-btn" id="cancel-changes" onclick="cancelChanges2()">Cancel</button>`;
+}
+
+function cancelChanges2() {
+            const content = document.getElementById('content');
+            content.innerHTML = `<div class="profile-details">
+                <div class="profile-header">
+                    <div class="profile-image-container">
+                        <img src="images/default_pfp.jpg" alt="Profile Picture" class="profile-picture" id="profile-image">
+                        <img src="images/edit-icon.png" alt="Edit Icon" class="edit-icon">
+                        <span class="tooltiptext">Edit Profile Picture</span>
+                    </div>
+                    <input type="file" id="file-input" accept="image/*" style="display: none;">
+                    <div class="profile-info">
+                        <h1 class="profile-name" id="profile-username">Loading...</h1>
+                        <p class="profile-email" id = "profile-email">Loading...</p>
+                    </div>
+                </div>
+                <div class="profile-bio">
+                    <h2>About Me</h2>
+                    <div class="about-me-container">
+                        <p id="profile-about-me">Loading...</p>
+                    </div>
+                </div>
+                <div class="edit-profile-btns">
+                    <button class="edit-profile-btn" id="update-profile-btn" onclick="editProfile()">Edit Profile</button>
+                    <button class="edit-profile-btn" id="change-password-btn" onclick="changePassword()">Change Password</button>
+                </div>
+            </div>`;
+            setupProfilePage();
+}
+
+async function savePasswordChanges() {
+    const currentPassword = document.getElementById('current-password').value.trim();
+    const newPassword = document.getElementById('new-password').value.trim();
+    const confirmNewPassword = document.getElementById('confirm-new-password').value.trim();
+
+    if (newPassword !== confirmNewPassword) {
+        alert("New passwords do not match!");
+        return;
+    }
+
+    if (newPassword.length < 8) {
+        alert("New password must be at least 8 characters long.");
+        return;
+    }
+
+    try {
+        const response = await fetch('php/user/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.status === 'success') {
+            alert(result.message);
+            cancelChanges2();
+        } else {
+            alert(`Update failed: ${result.message}`);
+        }
+    } catch (error) {
+        alert(`An error occurred: ${error.message}`);
+        console.error('Fetch error:', error);
+    }
+}
+
+

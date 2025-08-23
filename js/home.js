@@ -42,7 +42,8 @@ async function setupHomePage() {
             <button onclick="filterCategory('accessories')">Accessories</button>
             <button onclick="filterCategory('dresses')">Dresses</button>
             <button onclick="filterCategory('hats')">Hats</button>
-            <button onclick="filterCategory('sportswear')">Sportswear</button>    
+            <button onclick="filterCategory('sportswear')">Sportswear</button>
+            <input type="text" id="search-input" class="searchBySeller" placeholder="Search By Seller..." oninput="filterItemsBySeller()">    
         </div>
 
         <!-- Items container -->
@@ -123,6 +124,15 @@ async function addHomeViewItemButtonListeners() {
     });
 }
 
+function filterItemsBySeller() {
+    const searchInput = document.getElementById('search-input').value.toLowerCase();
+    const itemCards = document.querySelectorAll('.item-card');
+
+    itemCards.forEach(card => {
+        const sellerName = card.querySelector('.item-seller').innerText.toLowerCase();
+        card.style.display = sellerName.includes(searchInput) ? 'flex' : 'none';
+    });
+}
 
 // let cart = {};
 
@@ -212,19 +222,17 @@ function getCartItemCount() {
  */
 async function renderCart() {
     const cartContainer = document.getElementById('content');
-    cartContainer.innerHTML = '<h2>Loading cart...</h2>'; // Add a loading state
+    cartContainer.innerHTML = '<h2>Loading cart...</h2>';
 
     try {
         const response = await fetch('php/items/cart');
         const data = await response.json();
 
         if (!response.ok) {
-            // Handle errors like 401 or 404
             cartContainer.innerHTML = `<p class="error-message">${data.message}</p>`;
             return;
         }
 
-        // Get the cart items array directly from the response
         const cartItems = data.cart_items; 
 
         if (!cartItems || cartItems.length === 0) {
@@ -244,7 +252,6 @@ async function renderCart() {
                 <div class="cart-items-list">
         `;
 
-        // Loop directly through the cartItems array
         for (const item of cartItems) {
             cartTotal += parseFloat(item.price);
             cartHtml += `
@@ -264,6 +271,28 @@ async function renderCart() {
                 <h3>Total: $<span id="cart-total-price">${cartTotal.toFixed(2)}</span></h3>
                 <button class="checkout-btn" id="checkout-btn" onclick="sellItemsInCart()">Checkout</button>
             </div>
+            
+            <div class="overlay"></div>
+            <div id="payment-box" class="payment-form">
+                <h1 id="payment-load">Loading Payment Form...</h1>
+                
+            <form id="payment-form-content" style="display: none;">
+                <div id="address-details">
+                    <h3>Shipping Address</h3>
+                    <input type="text" id="name-input" placeholder="Full Name" required>
+                    <input type="text" id="street-input" placeholder="Street Address" required>
+                    <input type="text" id="city-input" placeholder="City" required>
+                    <input type="text" id="state-input" placeholder="State/Province">
+                    <input type="text" id="zip-input" placeholder="Postal/Zip Code" required>
+                </div>
+
+                <div id="payment-element"></div>
+                <div id="payment-message" role="alert"></div>
+                <button id="submit-button" type="submit">Pay</button>
+                
+            </form>
+            </div>
+
         </div>`;
 
         cartContainer.innerHTML = cartHtml;
@@ -326,20 +355,129 @@ async function sellItemsInCart() {
     // 2. Get the total price from the rendered cart
     const totalPriceElement = document.getElementById('cart-total-price');
     const totalPrice = totalPriceElement ? parseFloat(totalPriceElement.innerText) : 0;
+    const amountInCents = Math.round(totalPrice * 100);
+
+    localStorage.setItem('checkoutData', JSON.stringify({ itemIds, totalPrice }));
+
+    await createAndMountPaymentForm(amountInCents);
+    
+
+}
+
+async function createAndMountPaymentForm(amountInCents) {
+    const paymentBox = document.getElementById('payment-box');
+    const paymentLoader = document.getElementById('payment-load');
+    const paymentFormContent = document.getElementById('payment-form-content');
+    const overlay = document.querySelector('.overlay');
+
+    // Show the box and the overlay immediately
+    paymentBox.style.display = 'flex';
+    paymentLoader.style.display = 'flex';
+    overlay.style.display = 'block';
+
+    const stripe = Stripe('pk_test_51RyAtVDwPzptKpdZYej9wczxCosCsAQJTxvVDWKTvNercrvIG80BkdDdhaL8bTutmYXlqBU2ATDEjGtaMiDc5PP0009Qt80ZE1');
 
     try {
-        // 3. Send a POST request to the checkout endpoint
+        // ... (Your existing code to fetch clientSecret) ...
+        const response = await fetch('php/create-payment-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: amountInCents }),
+        });
+        const { clientSecret } = await response.json();
+
+        // Hide the loading message and show the form after the clientSecret is received
+        paymentLoader.style.display = 'none';
+        paymentFormContent.style.display = 'block'; // Make the inner form block or flex
+
+        // ... (Your existing Stripe initialization and form submission code) ...
+        const elements = stripe.elements({ clientSecret });
+        const paymentElement = elements.create('payment');
+        paymentElement.mount('#payment-element');
+
+        const form = document.getElementById('payment-form-content');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Collect shipping details from the inputs
+            const shippingDetails = {
+                name: document.getElementById('name-input').value,
+                address: {
+                    street: document.getElementById('street-input').value,
+                    city: document.getElementById('city-input').value,
+                    state: document.getElementById('state-input').value,
+                    zip: document.getElementById('zip-input').value,
+                },
+            };
+            
+            // Retrieve the existing data and update it with shipping details
+            const checkoutData = JSON.parse(localStorage.getItem('checkoutData'));
+            checkoutData.shippingDetails = shippingDetails;
+            localStorage.setItem('checkoutData', JSON.stringify(checkoutData));
+            
+            // Submit the payment to Stripe
+            const { error: submitError } = await elements.submit();
+            
+            if (submitError) {
+                const messageContainer = document.querySelector('#payment-message');
+                messageContainer.textContent = submitError.message;
+                return;
+            }
+
+            // After successful submission, confirm the payment
+            const baseURL = window.location.origin;
+            const returnPath = baseURL.includes('localhost') ? '/Fits_n_Finds%20-%20Copy/#success' : '/#success';
+            const returnUrl = `${baseURL}${returnPath}`;
+
+            const { error } = await stripe.confirmPayment({
+                elements,
+                clientSecret,
+                confirmParams: {
+                    return_url: returnUrl,
+                },
+            });
+
+            if (error) {
+                const messageContainer = document.querySelector('#payment-message');
+                messageContainer.textContent = error.message;
+            }
+        });
+
+    } catch (error) {
+        console.error('Failed to initialize payment:', error);
+        paymentBox.style.display = 'none'; // Hide the entire box on error
+        overlay.style.display = 'none'; // Hide the overlay as well
+        alert('An error occurred while preparing the payment. Please try again.');
+    }
+}
+
+async function setupSuccessfulTransactionPage() {
+    const checkoutData = JSON.parse(localStorage.getItem('checkoutData'));
+    console.log('Updated checkoutData:', checkoutData);
+    if (!checkoutData) {
+        console.error('Checkout data not found in local storage.');
+        // Handle error, maybe redirect to cart page
+        return;
+    }
+
+    // Extract the item IDs, total price, and shipping details
+    const { itemIds, totalPrice, shippingDetails } = checkoutData;
+
+    try {
         const response = await fetch('php/items/sell', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ item_ids: itemIds, total_price: totalPrice }),
+            body: JSON.stringify({ 
+                item_ids: itemIds, 
+                total_price: totalPrice,
+                shipping_details: shippingDetails
+            }),
         });
 
         const data = await response.json();
 
-        // 4. Handle the server's response
         if (response.ok) {
             alert('Thank you for your purchase!');
             renderCart(); 
